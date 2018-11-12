@@ -190,7 +190,12 @@ MSLane::MSLane(const std::string& id, double maxSpeed, double length, MSEdge* co
     myLengthGeometryFactor(MAX2(POSITION_EPS, myShape.length()) / myLength), // factor should not be 0
     myIsRampAccel(isRampAccel),
     myRightSideOnEdge(0), // initialized in MSEdge::initialize
-    myRightmostSublane(0) {
+    myRightmostSublane(0) 
+#ifdef HAVE_FOX
+    ,myPlanMoveTask(*this, 0)
+#endif
+
+{
     // initialized in MSEdge::initialize
     initRestrictions();// may be reloaded again from initialized in MSEdge::closeBuilding
     assert(myRNGs.size() > 0);

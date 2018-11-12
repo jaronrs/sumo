@@ -1096,6 +1096,13 @@ public:
         return false;
     }
 
+#ifdef HAVE_FOX
+    FXWorkerThread::Task* getPlanMoveTask(const SUMOTime time) {
+        myPlanMoveTask.setTime(time);
+        return &myPlanMoveTask;
+    }
+#endif
+
     /// @name State saving/loading
     /// @{
 
@@ -1486,13 +1493,19 @@ private:
      * @class SimulationTask
      * @brief the routing task which mainly calls reroute of the vehicle
      */
+
+    /// XXX move time into the FXWorkerThread context and get rid of setTime
+    /// XXX move current stage (planMove, etc into the FXWorkerThread context and use a single task for all stages)
     class SimulationTask : public FXWorkerThread::Task {
     public:
         SimulationTask(MSLane& l, const SUMOTime time)
             : myLane(l), myTime(time) {}
+        void setTime(const SUMOTime time) {
+            myTime = time;
+        }
     protected:
         MSLane& myLane;
-        const SUMOTime myTime;
+        SUMOTime myTime;
     private:
         /// @brief Invalidated assignment operator.
         SimulationTask& operator=(const SimulationTask&);
@@ -1502,10 +1515,12 @@ private:
     public:
         PlanMoveTask(MSLane& l, const SUMOTime time)
             : SimulationTask(l, time) {}
-        void run() {
+        void run(FXWorkerThread* /*context*/) {
             myLane.planMovements(myTime);
         }
     };
+
+    PlanMoveTask myPlanMoveTask;
 #endif
 private:
     /// @brief invalidated copy constructor

@@ -33,6 +33,12 @@
 #include "MSLane.h"
 #include "MSVehicle.h"
 
+// ===========================================================================
+// static member definitions
+// ===========================================================================
+#ifdef HAVE_FOX
+FXWorkerThread::Pool MSEdgeControl::myThreadPool;
+#endif
 
 // ===========================================================================
 // member method definitions
@@ -92,8 +98,10 @@ void
 MSEdgeControl::planMovements(SUMOTime t) {
 #ifdef HAVE_FOX
     const int numThreads = OptionsCont::getOptions().getInt("threads");
-    if (myThreadPool.size() < numThreads) {
-        new FXWorkerThread(myThreadPool);
+    if (numThreads > 1) {
+        while (myThreadPool.size() < numThreads) {
+            new FXWorkerThread(myThreadPool);
+        }
     }
 #endif
     for (std::list<MSLane*>::iterator i = myActiveLanes.begin(); i != myActiveLanes.end();) {
@@ -103,7 +111,7 @@ MSEdgeControl::planMovements(SUMOTime t) {
         } else {
 #ifdef HAVE_FOX
             if (myThreadPool.size() > 0) {
-                myThreadPool.add((*i)->getPlanMoveTask(t));
+                myThreadPool.add((*i)->getPlanMoveTask(t), (*i)->getRNGIndex() % myThreadPool.size());
                 ++i;
                 continue;
             }
@@ -113,7 +121,7 @@ MSEdgeControl::planMovements(SUMOTime t) {
         }
     }
 #ifdef HAVE_FOX
-    myThreadPool.waitAll();
+    myThreadPool.waitAll(false);
 #endif
 }
 
