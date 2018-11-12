@@ -561,7 +561,7 @@ MSLink::blockedAtTime(SUMOTime arrivalTime, SUMOTime leaveTime, double arrivalSp
                 && (ego == nullptr
                     || ego->getVehicleType().getParameter().getJMParam(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0) == 0
                     || ego->getVehicleType().getParameter().getJMParam(SUMO_ATTR_JM_IGNORE_FOE_SPEED, 0) < it.first->getSpeed()
-                    || ego->getVehicleType().getParameter().getJMParam(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0) < RandHelper::rand())
+                    || ego->getVehicleType().getParameter().getJMParam(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0) < RandHelper::rand(ego->getRNG()))
                 && blockedByFoe(it.first, it.second, arrivalTime, leaveTime, arrivalSpeed, leaveSpeed, sameTargetLane,
                                 impatience, decel, waitingTime, ego)) {
             if (collectFoes == nullptr) {

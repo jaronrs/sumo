@@ -3935,7 +3935,7 @@ MSVehicle::setApproachingForAllLinks(const SUMOTime t) {
     for (DriveProcessItem& dpi : myLFLinkLanes) {
         if (dpi.myLink != nullptr) {
             if (dpi.myLink->getState() == LINKSTATE_ALLWAY_STOP) {
-                dpi.myArrivalTime += (SUMOTime)RandHelper::rand((int)2); // tie braker
+                dpi.myArrivalTime += (SUMOTime)RandHelper::rand((int)2, getRNG()); // tie braker
             }
             dpi.myLink->setApproaching(this, dpi.myArrivalTime, dpi.myArrivalSpeed, dpi.getLeaveSpeed(),
                                         dpi.mySetRequest, dpi.myArrivalTimeBraking, dpi.myArrivalSpeedBraking, getWaitingTime(), dpi.myDistance);
