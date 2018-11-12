@@ -1,4 +1,4 @@
-Eclipse SUMO Version v1_0_1+0549-27d185b
+Eclipse SUMO Version v1_0_1+0617-70ae16b
  Copyright (C) 2001-2018 German Aerospace Center (DLR) and others; http://sumo.dlr.de
 A microscopic, multi-modal traffic simulation.
 
@@ -116,6 +116,8 @@ Processing Options:
   --step-method.ballistic              Whether to use ballistic method for the
                                          positional update of vehicles (default
                                          is a semi-implicit Euler method).
+  --threads INT                        Defines the number of threads for
+                                         parallel simulation
   --lateral-resolution FLOAT           Defines the resolution in m when
                                          handling lateral positioning within a
                                          lane (with -1 all vehicles drive at the
@@ -479,6 +481,14 @@ Random Number Options:
                                          with the current system time
   --seed INT                           Initialises the random number generator
                                          with the given value
+  --thread-rngs INT                    Number of pre-allocated random number
+                                         generators to ensure repeatable
+                                         multi-threaded simulations. This number
+                                         should be at least as high as the
+                                         number of threads. Simulations with the
+                                         same seend and the same number of
+                                         thread-rngs will produce the same
+                                         result
 
 GUI Only Options:
   -g, --gui-settings-file FILE         Load visualisation settings from FILE

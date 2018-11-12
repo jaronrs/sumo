@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on Tue Nov  6 12:39:16 2018 by Eclipse SUMO Version v1_0_1+0537-0204138
+<!-- generated on Mon Nov 12 14:33:08 2018 by Eclipse SUMO Version v1_0_1+0617-70ae16b
 This data file and the accompanying materials
 are made available under the terms of the Eclipse Public License v2.0
 which accompanies this distribution, and is available at
@@ -41,5 +41,5 @@ SPDX-License-Identifier: EPL-2.0
 -->
 
 <e3Detector xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/det_e3_file.xsd">
-   <interval begin="0.00" end="100.00" id="tt_fc09" meanTravelTime="42.62" meanOverlapTravelTime="43.02" meanSpeed="11.03" meanHaltsPerVehicle="0.50" meanTimeLoss="9.09" vehicleSum="4" meanSpeedWithin="10.01" meanHaltsPerVehicleWithin="0.50" meanDurationWithin="33.73" vehicleSumWithin="14" meanIntervalSpeedWithin="10.01" meanIntervalHaltsPerVehicleWithin="0.50" meanIntervalDurationWithin="33.73" meanTimeLossWithin="12.34"/>
+   <interval begin="0.00" end="100.00" id="tt_fc09" meanTravelTime="42.55" meanOverlapTravelTime="42.96" meanSpeed="11.04" meanHaltsPerVehicle="0.50" meanTimeLoss="9.03" vehicleSum="4" meanSpeedWithin="10.08" meanHaltsPerVehicleWithin="0.54" meanDurationWithin="36.37" vehicleSumWithin="13" meanIntervalSpeedWithin="10.08" meanIntervalHaltsPerVehicleWithin="0.54" meanIntervalDurationWithin="36.37" meanTimeLossWithin="13.32"/>
 </e3Detector>
