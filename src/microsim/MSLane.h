@@ -46,6 +46,10 @@
 #include "MSMoveReminder.h"
 #include <libsumo/Helper.h>
 
+#ifdef HAVE_FOX
+#include <utils/foxtools/FXWorkerThread.h>
+#endif
+
 
 // ===========================================================================
 // class declarations
@@ -1477,6 +1481,32 @@ private:
         const MSEdge* const myEdge;
     };
 
+#ifdef HAVE_FOX
+    /**
+     * @class SimulationTask
+     * @brief the routing task which mainly calls reroute of the vehicle
+     */
+    class SimulationTask : public FXWorkerThread::Task {
+    public:
+        SimulationTask(MSLane& l, const SUMOTime time)
+            : myLane(l), myTime(time) {}
+    protected:
+        MSLane& myLane;
+        const SUMOTime myTime;
+    private:
+        /// @brief Invalidated assignment operator.
+        SimulationTask& operator=(const SimulationTask&);
+    };
+
+    class PlanMoveTask : public SimulationTask {
+    public:
+        PlanMoveTask(MSLane& l, const SUMOTime time)
+            : SimulationTask(l, time) {}
+        void run() {
+            myLane.planMovements(myTime);
+        }
+    };
+#endif
 private:
     /// @brief invalidated copy constructor
     MSLane(const MSLane&);

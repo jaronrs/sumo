@@ -24,13 +24,14 @@
 // ===========================================================================
 #include <config.h>
 
+#include <iostream>
+#include <vector>
+#include <utils/options/OptionsCont.h>
 #include "MSEdgeControl.h"
 #include "MSGlobals.h"
 #include "MSEdge.h"
 #include "MSLane.h"
 #include "MSVehicle.h"
-#include <iostream>
-#include <vector>
 
 
 // ===========================================================================
@@ -89,15 +90,31 @@ MSEdgeControl::patchActiveLanes() {
 
 void
 MSEdgeControl::planMovements(SUMOTime t) {
+#ifdef HAVE_FOX
+    const int numThreads = OptionsCont::getOptions().getInt("threads");
+    if (myThreadPool.size() < numThreads) {
+        new FXWorkerThread(myThreadPool);
+    }
+#endif
     for (std::list<MSLane*>::iterator i = myActiveLanes.begin(); i != myActiveLanes.end();) {
         if ((*i)->getVehicleNumber() == 0) {
             myLanes[(*i)->getNumericalID()].amActive = false;
             i = myActiveLanes.erase(i);
         } else {
+#ifdef HAVE_FOX
+            if (myThreadPool.size() > 0) {
+                myThreadPool.add((*i)->getPlanMoveTask(t));
+                ++i;
+                continue;
+            }
+#endif
             (*i)->planMovements(t);
             ++i;
         }
     }
+#ifdef HAVE_FOX
+    myThreadPool.waitAll();
+#endif
 }
 
 void

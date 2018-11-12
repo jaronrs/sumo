@@ -37,6 +37,10 @@
 #include <utils/common/SUMOTime.h>
 #include <utils/common/Named.h>
 
+#ifdef HAVE_FOX
+#include <utils/foxtools/FXWorkerThread.h>
+#endif
+
 
 // ===========================================================================
 // class declarations
@@ -225,6 +229,10 @@ private:
 
     /// @brief The list of active (not empty) lanes
     std::vector<SUMOTime> myLastLaneChange;
+
+#ifdef HAVE_FOX
+    static FXWorkerThread::Pool myThreadPool;
+#endif
 
 private:
     /// @brief Copy constructor.
