@@ -1094,7 +1094,6 @@ public:
      */
     double getTimeGapOnLane() const;
 
-
     /// @name Emission retrieval
     //@{
 

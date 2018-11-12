@@ -92,6 +92,7 @@ MSLane::CollisionAction MSLane::myCollisionAction(MSLane::COLLISION_ACTION_TELEP
 bool MSLane::myCheckJunctionCollisions(false);
 SUMOTime MSLane::myCollisionStopTime(0);
 double  MSLane::myCollisionMinGapFactor(1.0);
+std::vector<std::mt19937> MSLane::myRNGs;
 
 // ===========================================================================
 // internal class method definitions
@@ -192,6 +193,8 @@ MSLane::MSLane(const std::string& id, double maxSpeed, double length, MSEdge* co
     myRightmostSublane(0) {
     // initialized in MSEdge::initialize
     initRestrictions();// may be reloaded again from initialized in MSEdge::closeBuilding
+    assert(myRNGs.size() > 0);
+    myRNGIndex = numericalID % myRNGs.size();
 }
 
 
@@ -3486,6 +3489,18 @@ MSLane::checkForPedestrians(const MSVehicle* aVehicle, double& speed, double& di
         }
     }
     return true;
+}
+
+void 
+MSLane::initRNGs(const OptionsCont& oc) {
+    myRNGs.clear();
+    const int numRNGs = oc.getInt("thread-rngs");
+    const bool random = oc.getBool("random");
+    int seed = oc.getInt("seed");
+    for (int i = 0; i < numRNGs; i++) {
+        myRNGs.push_back(std::mt19937());
+        RandHelper::initRand(&myRNGs.back(), random, seed++);
+    }
 }
 
 /****************************************************************************/

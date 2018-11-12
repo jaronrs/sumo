@@ -385,6 +385,11 @@ public:
     /// @brief whether this vehicle is selected in the GUI
     virtual bool isSelected() const = 0;
 
+    /** @brief Returns the associated RNG for this vehicle
+    * @return The vehicle's associated RNG
+    */
+    virtual std::mt19937* getRNG() const = 0;
+
     /// @name state io
     //@{
 

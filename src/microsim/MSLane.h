@@ -205,7 +205,15 @@ public:
     /// @brief Destructor
     virtual ~MSLane();
 
+    /// @brief return the associated RNG index
+    int getRNGIndex() const {
+        return myRNGIndex;
+    }
 
+    /// @brief return the associated RNG
+    std::mt19937* getRNG() const {
+        return &myRNGs[myRNGIndex];
+    }
 
     /// @name Additional initialisation
     /// @{
@@ -696,6 +704,10 @@ public:
      */
     template<class RTREE>
     static void fill(RTREE& into);
+
+
+    /// @brief initialize rngs
+    static void initRNGs(const OptionsCont& oc);
     /// @}
 
 
@@ -1323,11 +1335,16 @@ protected:
     // @brief transient changes in permissions
     std::map<long long, SVCPermissions> myPermissionChanges;
 
+    // @brief index of the associated thread-rng
+    int myRNGIndex;
+
     /// definition of the static dictionary type
     typedef std::map< std::string, MSLane* > DictType;
 
     /// Static dictionary to associate string-ids with objects.
     static DictType myDict;
+
+    static std::vector<std::mt19937> myRNGs;
 
 private:
     /// @brief This lane's move reminder

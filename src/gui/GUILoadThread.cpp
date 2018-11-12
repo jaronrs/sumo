@@ -148,9 +148,7 @@ GUILoadThread::run() {
     }
 
     // initialise global settings
-    RandHelper::initRandGlobal();
-    RandHelper::initRandGlobal(MSRouteHandler::getParsingRNG());
-    RandHelper::initRandGlobal(MSDevice::getEquipmentRNG());
+    NLBuilder::initRandomness();
     MSFrame::setMSGlobals(oc);
     GUITexturesHelper::allowTextures(!oc.getBool("disable-textures"));
 
