@@ -1098,8 +1098,8 @@ public:
 
 #ifdef HAVE_FOX
     FXWorkerThread::Task* getPlanMoveTask(const SUMOTime time) {
-        myPlanMoveTask.setTime(time);
-        return &myPlanMoveTask;
+        mySimulationTask.init(&MSLane::planMovements, time);
+        return &mySimulationTask;
     }
 #endif
 
@@ -1487,37 +1487,34 @@ private:
     };
 
 #ifdef HAVE_FOX
+    /// Type of the function that is called for the simulation stage (e.g. planMovements).
+    typedef void(MSLane::*Operation)(const SUMOTime);
+
     /**
      * @class SimulationTask
      * @brief the routing task which mainly calls reroute of the vehicle
      */
-
-    /// XXX reuse the task with a function pointer
     class SimulationTask : public FXWorkerThread::Task {
     public:
         SimulationTask(MSLane& l, const SUMOTime time)
             : myLane(l), myTime(time) {}
-        void setTime(const SUMOTime time) {
+        void init(Operation operation, const SUMOTime time) {
+            myOperation = operation;
             myTime = time;
         }
-    protected:
+        void run(FXWorkerThread* /*context*/) {
+            (myLane.*(myOperation))(myTime);
+        }
+    private:
+        Operation myOperation;
         MSLane& myLane;
         SUMOTime myTime;
     private:
         /// @brief Invalidated assignment operator.
-        SimulationTask& operator=(const SimulationTask&);
+        SimulationTask& operator=(const SimulationTask&) = delete;
     };
 
-    class PlanMoveTask : public SimulationTask {
-    public:
-        PlanMoveTask(MSLane& l, const SUMOTime time)
-            : SimulationTask(l, time) {}
-        void run(FXWorkerThread* /*context*/) {
-            myLane.planMovements(myTime);
-        }
-    };
-
-    PlanMoveTask myPlanMoveTask;
+    SimulationTask mySimulationTask;
     /// @brief Mutex for access to the cached leader info value
     mutable FXMutex myLeaderInfoMutex;
     /// @brief Mutex for access to the cached follower info value

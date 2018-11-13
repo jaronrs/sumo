@@ -33,12 +33,6 @@
 #include "MSLane.h"
 #include "MSVehicle.h"
 
-// ===========================================================================
-// static member definitions
-// ===========================================================================
-#ifdef HAVE_FOX
-FXWorkerThread::Pool MSEdgeControl::myThreadPool;
-#endif
 
 // ===========================================================================
 // member method definitions

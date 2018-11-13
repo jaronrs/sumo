@@ -1631,7 +1631,7 @@ public:
     const Influencer* getInfluencer() const;
 
     bool hasInfluencer() const {
-        return myInfluencer != 0;
+        return myInfluencer != nullptr;
     }
 
     /// @brief allow TraCI to influence a lane change decision

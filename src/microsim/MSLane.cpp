@@ -191,7 +191,7 @@ MSLane::MSLane(const std::string& id, double maxSpeed, double length, MSEdge* co
     myRightSideOnEdge(0), // initialized in MSEdge::initialize
     myRightmostSublane(0) 
 #ifdef HAVE_FOX
-    ,myPlanMoveTask(*this, 0)
+    ,mySimulationTask(*this, 0)
 #endif
 
 {
@@ -1405,6 +1405,7 @@ MSLane::detectPedestrianJunctionCollision(const MSVehicle* collider, const Posit
         }
     }
 }
+
 
 bool
 MSLane::detectCollisionBetween(SUMOTime timestep, const std::string& stage, MSVehicle* collider, MSVehicle* victim,

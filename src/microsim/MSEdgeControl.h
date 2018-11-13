@@ -231,7 +231,7 @@ private:
     std::vector<SUMOTime> myLastLaneChange;
 
 #ifdef HAVE_FOX
-    static FXWorkerThread::Pool myThreadPool;
+    FXWorkerThread::Pool myThreadPool;
 #endif
 
 private:
