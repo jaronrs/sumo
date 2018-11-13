@@ -38,7 +38,7 @@
 #include <utils/xml/SUMOXMLDefinitions.h>
 
 #ifdef HAVE_FOX
-#include <utils/foxtools/FXWorkerThread.h>
+#include <fx.h>
 #endif
 
 
