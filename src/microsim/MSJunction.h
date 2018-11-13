@@ -37,6 +37,10 @@
 #include <utils/common/UtilExceptions.h>
 #include <utils/xml/SUMOXMLDefinitions.h>
 
+#ifdef HAVE_FOX
+#include <utils/foxtools/FXWorkerThread.h>
+#endif
+
 
 // ===========================================================================
 // class declarations
@@ -160,6 +164,11 @@ protected:
     typedef std::map<const MSVehicle*, std::set<const MSVehicle*> > LeaderMap;
     LeaderMap myLinkLeaders;
 
+private:
+#ifdef HAVE_FOX
+    /// @brief the mutex for concurrent modification of the leader map by parallel planMove
+    FXMutex myLinkLeaderMutex;
+#endif
 
 private:
     /// @brief Invalidated copy constructor.

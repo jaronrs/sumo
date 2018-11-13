@@ -115,6 +115,9 @@ MSJunction::isLeader(const MSVehicle* ego, const MSVehicle* foe, bool updateLead
 #endif
         return true;
     }
+#ifdef HAVE_FOX
+    FXMutexLock lock(myLinkLeaderMutex);
+#endif
     if (myLinkLeaders.find(ego) == myLinkLeaders.end() || myLinkLeaders[ego].count(foe) == 0) {
         // we are not yet the leader for foe, thus foe will be our leader
         if (updateLeader) {
