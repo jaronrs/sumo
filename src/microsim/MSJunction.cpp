@@ -87,6 +87,9 @@ MSJunction::getNrOfIncomingLanes() const {
 
 void
 MSJunction::passedJunction(const MSVehicle* vehicle) {
+#ifdef HAVE_FOX
+    FXMutexLock lock(myLinkLeaderMutex);
+#endif
     myLinkLeaders.erase(vehicle);
 #ifdef DEBUG_LINKLEADER
     if DEBUG_COND {
