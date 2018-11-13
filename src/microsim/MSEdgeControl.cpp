@@ -26,7 +26,6 @@
 
 #include <iostream>
 #include <vector>
-#include <utils/options/OptionsCont.h>
 #include "MSEdgeControl.h"
 #include "MSGlobals.h"
 #include "MSEdge.h"
@@ -91,9 +90,8 @@ MSEdgeControl::patchActiveLanes() {
 void
 MSEdgeControl::planMovements(SUMOTime t) {
 #ifdef HAVE_FOX
-    const int numThreads = OptionsCont::getOptions().getInt("threads");
-    if (numThreads > 1) {
-        while (myThreadPool.size() < numThreads) {
+    if (MSGlobals::gNumSimThreads > 1) {
+        while (myThreadPool.size() < MSGlobals::gNumSimThreads) {
             new FXWorkerThread(myThreadPool);
         }
     }
@@ -104,7 +102,7 @@ MSEdgeControl::planMovements(SUMOTime t) {
             i = myActiveLanes.erase(i);
         } else {
 #ifdef HAVE_FOX
-            if (myThreadPool.size() > 0) {
+            if (MSGlobals::gNumSimThreads > 1) {
                 myThreadPool.add((*i)->getPlanMoveTask(t), (*i)->getRNGIndex() % myThreadPool.size());
                 ++i;
                 continue;
@@ -115,7 +113,9 @@ MSEdgeControl::planMovements(SUMOTime t) {
         }
     }
 #ifdef HAVE_FOX
-    myThreadPool.waitAll(false);
+    if (MSGlobals::gNumSimThreads > 1) {
+        myThreadPool.waitAll(false);
+    }
 #endif
 }
 

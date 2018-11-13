@@ -688,6 +688,7 @@ MSFrame::setMSGlobals(OptionsCont& oc) {
         // value already checked in checkOptions()
         MSGlobals::gDefaultEmergencyDecel = StringUtils::toDouble(defaultEmergencyDecelOption);
     }
+    MSGlobals::gNumSimThreads = OptionsCont::getOptions().getInt("threads");
 
 #ifdef _DEBUG
     if (oc.isSet("movereminder-output")) {

@@ -1003,9 +1003,6 @@ MSLane::safeInsertionSpeed(const MSVehicle* veh, double seen, const MSLeaderInfo
 // ------ Handling vehicles lapping into lanes ------
 const MSLeaderInfo
 MSLane::getLastVehicleInformation(const MSVehicle* ego, double latOffset, double minPos, bool allowCached) const {
-#ifdef HAVE_FOX
-    FXMutexLock lock(myLeaderInfoMutex);
-#endif
     if (myLeaderInfoTime < MSNet::getInstance()->getCurrentTimeStep() || ego != nullptr || minPos > 0 || !allowCached) {
         MSLeaderInfo leaderTmp(this, ego, latOffset);
         AnyVehicleIterator last = anyVehiclesBegin();
@@ -1034,6 +1031,12 @@ MSLane::getLastVehicleInformation(const MSVehicle* ego, double latOffset, double
         }
         if (ego == nullptr && minPos == 0) {
             // update cached value
+#ifdef HAVE_FOX
+            if (MSGlobals::gNumSimThreads > 1) {
+                FXMutexLock lock(myLeaderInfoMutex);
+                myLeaderInfo = leaderTmp;
+            } else
+#endif
             myLeaderInfo = leaderTmp;
             myLeaderInfoTime = MSNet::getInstance()->getCurrentTimeStep();
         }
@@ -1053,15 +1056,18 @@ MSLane::getLastVehicleInformation(const MSVehicle* ego, double latOffset, double
 #endif
         return leaderTmp;
     }
+#ifdef HAVE_FOX
+    if (MSGlobals::gNumSimThreads > 1) {
+        FXMutexLock lock(myLeaderInfoMutex);
+        return myLeaderInfo;
+    }
+#endif
     return myLeaderInfo;
 }
 
 
 const MSLeaderInfo
 MSLane::getFirstVehicleInformation(const MSVehicle* ego, double latOffset, bool onlyFrontOnLane, double maxPos, bool allowCached) const {
-#ifdef HAVE_FOX
-    FXMutexLock lock(myFollowerInfoMutex);
-#endif
     if (myFollowerInfoTime < MSNet::getInstance()->getCurrentTimeStep() || ego != nullptr || maxPos < myLength || !allowCached || onlyFrontOnLane) {
         // XXX separate cache for onlyFrontOnLane = true
         MSLeaderInfo followerTmp(this, ego, latOffset);
@@ -1089,7 +1095,13 @@ MSLane::getFirstVehicleInformation(const MSVehicle* ego, double latOffset, bool 
         }
         if (ego == nullptr && maxPos == std::numeric_limits<double>::max()) {
             // update cached value
-            myFollowerInfo = followerTmp;
+#ifdef HAVE_FOX
+            if (MSGlobals::gNumSimThreads > 1) {
+                FXMutexLock lock(myFollowerInfoMutex);
+                myFollowerInfo = followerTmp;
+            } else
+#endif
+                myFollowerInfo = followerTmp;
             myFollowerInfoTime = MSNet::getInstance()->getCurrentTimeStep();
         }
 #ifdef DEBUG_PLAN_MOVE
@@ -1107,6 +1119,12 @@ MSLane::getFirstVehicleInformation(const MSVehicle* ego, double latOffset, bool 
 #endif
         return followerTmp;
     }
+#ifdef HAVE_FOX
+    if (MSGlobals::gNumSimThreads > 1) {
+        FXMutexLock lock(myFollowerInfoMutex);
+        return myFollowerInfo;
+    }
+#endif
     return myFollowerInfo;
 }
 
