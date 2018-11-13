@@ -374,10 +374,10 @@ public:
      * @param[in] allowCached Whether the cached value may be used
      * @return Information about the last vehicles
      */
-    const MSLeaderInfo& getLastVehicleInformation(const MSVehicle* ego, double latOffset, double minPos = 0, bool allowCached = true) const;
+    const MSLeaderInfo getLastVehicleInformation(const MSVehicle* ego, double latOffset, double minPos = 0, bool allowCached = true) const;
 
     /// @brief analogue to getLastVehicleInformation but in the upstream direction
-    const MSLeaderInfo& getFirstVehicleInformation(const MSVehicle* ego, double latOffset, bool onlyFrontOnLane, double maxPos = std::numeric_limits<double>::max(), bool allowCached = true) const;
+    const MSLeaderInfo getFirstVehicleInformation(const MSVehicle* ego, double latOffset, bool onlyFrontOnLane, double maxPos = std::numeric_limits<double>::max(), bool allowCached = true) const;
 
     /// @}
 
@@ -1322,8 +1322,6 @@ protected:
     /// @brief followers on all sublanes as seen by vehicles on consecutive lanes (cached)
     mutable MSLeaderInfo myFollowerInfo;
 
-    mutable MSLeaderInfo myLeaderInfoTmp;
-
     /// @brief time step for which myLeaderInfo was last updated
     mutable SUMOTime myLeaderInfoTime;
     /// @brief time step for which myFollowerInfo was last updated
@@ -1494,8 +1492,7 @@ private:
      * @brief the routing task which mainly calls reroute of the vehicle
      */
 
-    /// XXX move time into the FXWorkerThread context and get rid of setTime
-    /// XXX move current stage (planMove, etc into the FXWorkerThread context and use a single task for all stages)
+    /// XXX reuse the task with a function pointer
     class SimulationTask : public FXWorkerThread::Task {
     public:
         SimulationTask(MSLane& l, const SUMOTime time)
@@ -1521,6 +1518,10 @@ private:
     };
 
     PlanMoveTask myPlanMoveTask;
+    /// @brief Mutex for access to the cached leader info value
+    mutable FXMutex myLeaderInfoMutex;
+    /// @brief Mutex for access to the cached follower info value
+    mutable FXMutex myFollowerInfoMutex;
 #endif
 private:
     /// @brief invalidated copy constructor

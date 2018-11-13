@@ -184,7 +184,6 @@ MSLane::MSLane(const std::string& id, double maxSpeed, double length, MSEdge* co
     myBruttoVehicleLengthSum(0), myNettoVehicleLengthSum(0),
     myLeaderInfo(this, nullptr, 0),
     myFollowerInfo(this, nullptr, 0),
-    myLeaderInfoTmp(this, nullptr, 0),
     myLeaderInfoTime(SUMOTime_MIN),
     myFollowerInfoTime(SUMOTime_MIN),
     myLengthGeometryFactor(MAX2(POSITION_EPS, myShape.length()) / myLength), // factor should not be 0
@@ -1002,10 +1001,13 @@ MSLane::safeInsertionSpeed(const MSVehicle* veh, double seen, const MSLeaderInfo
 
 
 // ------ Handling vehicles lapping into lanes ------
-const MSLeaderInfo&
+const MSLeaderInfo
 MSLane::getLastVehicleInformation(const MSVehicle* ego, double latOffset, double minPos, bool allowCached) const {
+#ifdef HAVE_FOX
+    FXMutexLock lock(myLeaderInfoMutex);
+#endif
     if (myLeaderInfoTime < MSNet::getInstance()->getCurrentTimeStep() || ego != nullptr || minPos > 0 || !allowCached) {
-        myLeaderInfoTmp = MSLeaderInfo(this, ego, latOffset);
+        MSLeaderInfo leaderTmp(this, ego, latOffset);
         AnyVehicleIterator last = anyVehiclesBegin();
         int freeSublanes = 1; // number of sublanes for which no leader was found
         //if (ego->getID() == "disabled" && SIMTIME == 58) {
@@ -1021,10 +1023,10 @@ MSLane::getLastVehicleInformation(const MSVehicle* ego, double latOffset, double
 #endif
             if (veh != ego && veh->getPositionOnLane(this) >= minPos) {
                 const double latOffset = veh->getLatOffset(this);
-                freeSublanes = myLeaderInfoTmp.addLeader(veh, true, latOffset);
+                freeSublanes = leaderTmp.addLeader(veh, true, latOffset);
 #ifdef DEBUG_PLAN_MOVE
                 if (DEBUG_COND2(ego)) {
-                    std::cout << "         latOffset=" << latOffset << " newLeaders=" << myLeaderInfoTmp.toString() << "\n";
+                    std::cout << "         latOffset=" << latOffset << " newLeaders=" << leaderTmp.toString() << "\n";
                 }
 #endif
             }
@@ -1032,8 +1034,8 @@ MSLane::getLastVehicleInformation(const MSVehicle* ego, double latOffset, double
         }
         if (ego == nullptr && minPos == 0) {
             // update cached value
+            myLeaderInfo = leaderTmp;
             myLeaderInfoTime = MSNet::getInstance()->getCurrentTimeStep();
-            myLeaderInfo = myLeaderInfoTmp;
         }
 #ifdef DEBUG_PLAN_MOVE
         //if (DEBUG_COND2(ego)) std::cout << SIMTIME
@@ -1043,23 +1045,26 @@ MSLane::getLastVehicleInformation(const MSVehicle* ego, double latOffset, double
         //        << "    vehicles=" << toString(myVehicles)
         //        << "    partials=" << toString(myPartialVehicles)
         //        << "\n"
-        //        << "    result=" << myLeaderInfoTmp.toString()
+        //        << "    result=" << leaderTmp.toString()
         //        << "    cached=" << myLeaderInfo.toString()
         //        << "    myLeaderInfoTime=" << myLeaderInfoTime
         //        << "\n";
         gDebugFlag1 = false;
 #endif
-        return myLeaderInfoTmp;
+        return leaderTmp;
     }
     return myLeaderInfo;
 }
 
 
-const MSLeaderInfo&
+const MSLeaderInfo
 MSLane::getFirstVehicleInformation(const MSVehicle* ego, double latOffset, bool onlyFrontOnLane, double maxPos, bool allowCached) const {
+#ifdef HAVE_FOX
+    FXMutexLock lock(myFollowerInfoMutex);
+#endif
     if (myFollowerInfoTime < MSNet::getInstance()->getCurrentTimeStep() || ego != nullptr || maxPos < myLength || !allowCached || onlyFrontOnLane) {
         // XXX separate cache for onlyFrontOnLane = true
-        myLeaderInfoTmp = MSLeaderInfo(this, ego, latOffset);
+        MSLeaderInfo followerTmp(this, ego, latOffset);
         AnyVehicleIterator first = anyVehiclesUpstreamBegin();
         int freeSublanes = 1; // number of sublanes for which no leader was found
         const MSVehicle* veh = *first;
@@ -1078,14 +1083,14 @@ MSLane::getFirstVehicleInformation(const MSVehicle* ego, double latOffset, bool 
                     std::cout << "          veh=" << veh->getID() << " latOffset=" << latOffset << "\n";
                 }
 #endif
-                freeSublanes = myLeaderInfoTmp.addLeader(veh, true, latOffset);
+                freeSublanes = followerTmp.addLeader(veh, true, latOffset);
             }
             veh = *(++first);
         }
         if (ego == nullptr && maxPos == std::numeric_limits<double>::max()) {
             // update cached value
+            myFollowerInfo = followerTmp;
             myFollowerInfoTime = MSNet::getInstance()->getCurrentTimeStep();
-            myFollowerInfo = myLeaderInfoTmp;
         }
 #ifdef DEBUG_PLAN_MOVE
         //if (DEBUG_COND2(ego)) std::cout << SIMTIME
@@ -1095,12 +1100,12 @@ MSLane::getFirstVehicleInformation(const MSVehicle* ego, double latOffset, bool 
         //        << "    vehicles=" << toString(myVehicles)
         //        << "    partials=" << toString(myPartialVehicles)
         //        << "\n"
-        //        << "    result=" << myLeaderInfoTmp.toString()
-        //        //<< "    cached=" << myLeaderInfo.toString()
+        //        << "    result=" << followerTmp.toString()
+        //        //<< "    cached=" << myFollowerInfo.toString()
         //        << "    myLeaderInfoTime=" << myLeaderInfoTime
         //        << "\n";
 #endif
-        return myLeaderInfoTmp;
+        return followerTmp;
     }
     return myFollowerInfo;
 }
@@ -1262,9 +1267,9 @@ MSLane::detectCollisions(SUMOTime timestep, const std::string& stage) {
             if (follow->getLaneChangeModel().getShadowLane() != nullptr && follow->getLane() == this) {
                 // check whether follow collides on the shadow lane
                 const MSLane* shadowLane = follow->getLaneChangeModel().getShadowLane();
-                MSLeaderInfo ahead = shadowLane->getLastVehicleInformation(follow,
-                                     getRightSideOnEdge() - shadowLane->getRightSideOnEdge(),
-                                     follow->getPositionOnLane());
+                const MSLeaderInfo& ahead = shadowLane->getLastVehicleInformation(follow,
+                                                         getRightSideOnEdge() - shadowLane->getRightSideOnEdge(),
+                                                         follow->getPositionOnLane());
                 for (int i = 0; i < ahead.numSublanes(); ++i) {
                     MSVehicle* lead = const_cast<MSVehicle*>(ahead[i]);
                     if (lead != nullptr && lead != follow && shadowLane->detectCollisionBetween(timestep, stage, follow, lead, toRemove, toTeleport)) {
