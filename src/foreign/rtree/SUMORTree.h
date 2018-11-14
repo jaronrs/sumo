@@ -76,10 +76,11 @@ public:
     virtual ~SUMORTree() {
         // check if lock is locked before insert objects
         if (myLock.locked()) {
-            throw ProcessError("Mutex of SUMORTree is locked during call destructor");
+            // cannot throw exception in destructor
+            WRITE_ERROR("Mutex of SUMORTree is locked during call of the destructor");
         }
         // show information in gui testing debug gl mode
-        WRITE_GLDEBUG("Number of objects in SUMORTree during call destructor: " + toString(myTreeDebug.size()));
+        WRITE_GLDEBUG("Number of objects in SUMORTree during call of the destructor: " + toString(myTreeDebug.size()));
     }
 
     /** @brief Insert entry
