@@ -27,9 +27,9 @@
 #include "MSEdge.h"
 #include "MSJunction.h"
 
-
-
-
+#ifdef HAVE_FOX
+#include <utils/foxtools/FXConditionalLock.h>
+#endif
 
 
 // ===========================================================================
@@ -46,9 +46,6 @@
 // ===========================================================================
 class MSLink;
 
-// ===========================================================================
-// static member definitions
-// ===========================================================================
 
 // ===========================================================================
 // member method definition
@@ -88,7 +85,7 @@ MSJunction::getNrOfIncomingLanes() const {
 void
 MSJunction::passedJunction(const MSVehicle* vehicle) {
 #ifdef HAVE_FOX
-    FXMutexLock lock(myLinkLeaderMutex);
+    FXConditionalLock lock(myLinkLeaderMutex, MSGlobals::gNumSimThreads > 1);
 #endif
     myLinkLeaders.erase(vehicle);
 #ifdef DEBUG_LINKLEADER
@@ -119,7 +116,7 @@ MSJunction::isLeader(const MSVehicle* ego, const MSVehicle* foe, bool updateLead
         return true;
     }
 #ifdef HAVE_FOX
-    FXMutexLock lock(myLinkLeaderMutex);
+    FXConditionalLock lock(myLinkLeaderMutex, MSGlobals::gNumSimThreads > 1);
 #endif
     if (myLinkLeaders.find(ego) == myLinkLeaders.end() || myLinkLeaders[ego].count(foe) == 0) {
         // we are not yet the leader for foe, thus foe will be our leader

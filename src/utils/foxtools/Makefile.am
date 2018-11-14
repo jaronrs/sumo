@@ -4,7 +4,7 @@ EXTRA_DIST = FXThreadMessageRetriever.h
 
 libfoxtools_a_SOURCES = \
 FXBaseObject.cpp FXBaseObject.h \
-fxexdefs.h \
+FXConditionalLock.h fxexdefs.h \
 MFXImageHelper.cpp MFXImageHelper.h \
 FXLCDLabel.cpp FXLCDLabel.h \
 FXLinkLabel.cpp FXLinkLabel.h \

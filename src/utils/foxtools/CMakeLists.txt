@@ -1,6 +1,7 @@
 set(utils_foxtools_STAT_SRCS
    FXBaseObject.cpp
    FXBaseObject.h
+   FXConditionalLock.h
    fxexdefs.h
    MFXImageHelper.cpp
    MFXImageHelper.h
