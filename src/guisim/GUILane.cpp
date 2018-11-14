@@ -79,7 +79,8 @@ GUILane::GUILane(const std::string& id, double maxSpeed, double length,
 #ifdef HAVE_OSG
     myGeom(0),
 #endif
-    myAmClosed(false) {
+    myAmClosed(false),
+    myLock(true) {
     if (MSGlobals::gUseMesoSim) {
         myShape = splitAtSegments(shape);
         assert(fabs(myShape.length() - shape.length()) < POSITION_EPS);
