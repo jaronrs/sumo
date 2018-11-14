@@ -391,7 +391,7 @@ public:
      *  @param[in] accel the assumed acceleration
      *  @return distance covered in next integration step
      */
-    double getDeltaPos(double accel);
+    double getDeltaPos(const double accel) const;
 
 
     /// @name state setter/getter
@@ -1694,7 +1694,7 @@ protected:
      *  @param[in/out] vSafeMin The minimal safe (or admissible) velocity (used her for ensuring the clearing of junctions in time).
      *  @param[in/out] vSafeMinDist The distance to the next link, which should either be crossed this step, or in front of which the vehicle need to stop.
      */
-    void processLinkAproaches(double& vSafe, double& vSafeMin, double& vSafeMinDist);
+    void processLinkApproaches(double& vSafe, double& vSafeMin, double& vSafeMinDist);
 
 
     /** @brief This method checks if the vehicle has advanced over one or several lanes
@@ -1930,7 +1930,7 @@ protected:
     void checkRewindLinkLanes(const double lengthsInFront, DriveItemVector& lfLinks) const;
 
     /// @brief unregister approach from all upcoming links
-    void removeApproachingInformation(DriveItemVector& lfLinks) const;
+    void removeApproachingInformation(const DriveItemVector& lfLinks) const;
 
 
     /// @brief estimate leaving speed when accelerating across a link

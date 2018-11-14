@@ -252,10 +252,8 @@ MSRailSignal::getAppropriateState() {
             // check whether approaching vehicles reserve the block
             std::map<const MSLane*, const MSLink*>::iterator it = mySucceedingBlocksIncommingLinks.find(lane);
             if (it != mySucceedingBlocksIncommingLinks.end()) {
-                const MSLink* inCommingLing = it->second;
-                const std::map<const SUMOVehicle*, MSLink::ApproachingVehicleInformation, ComparatorIdLess> approaching = inCommingLing->getApproaching();
-                for (auto apprIt : approaching) {
-                    MSLink::ApproachingVehicleInformation info = apprIt.second;
+                for (const auto apprIt : it->second->getApproaching()) {
+                    const MSLink::ApproachingVehicleInformation& info = apprIt.second;
                     if (info.arrivalSpeedBraking > 0) {
                         succeedingBlockOccupied = true;
                         break;

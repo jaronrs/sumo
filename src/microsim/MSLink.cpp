@@ -337,9 +337,8 @@ MSLink::contIntersect(const MSLane* lane, const MSLane* foe) {
         return intersections.size() > 0;
     }
     return false;
-
-
 }
+
 
 void
 MSLink::setApproaching(const SUMOVehicle* approaching, const SUMOTime arrivalTime, const double arrivalSpeed, const double leaveSpeed,
@@ -353,9 +352,9 @@ MSLink::setApproaching(const SUMOVehicle* approaching, const SUMOTime arrivalTim
         }
     }
 #endif
-    myApproachingVehicles.insert(std::make_pair(approaching,
+    myApproachingVehicles.emplace(approaching,
                                  ApproachingVehicleInformation(arrivalTime, leaveTime, arrivalSpeed, leaveSpeed, setRequest,
-                                         arrivalTimeBraking, arrivalSpeedBraking, waitingTime, dist)));
+                                         arrivalTimeBraking, arrivalSpeedBraking, waitingTime, dist));
 }
 
 
@@ -370,7 +369,7 @@ MSLink::setApproaching(const SUMOVehicle* approaching, ApproachingVehicleInforma
         }
     }
 #endif
-    myApproachingVehicles.insert(std::make_pair(approaching, ai));
+    myApproachingVehicles.emplace(approaching, ai);
 }
 
 
