@@ -31,7 +31,6 @@
 #include <map>
 #include <utils/common/StdDefs.h>
 #include <utils/common/SUMOTime.h>
-#include <utils/foxtools/MFXMutex.h>
 
 
 // ===========================================================================
@@ -140,7 +139,7 @@ protected:
     std::vector<FXMDIChild*> mySubWindows;
     std::vector<FXMainWindow*> myTrackerWindows;
     /// A lock to make the removal and addition of trackers secure
-    MFXMutex myTrackerLock;
+    FXMutex myTrackerLock;
 
     /// Font used for popup-menu titles
     FXFont* myBoldFont;

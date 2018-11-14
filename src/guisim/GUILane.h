@@ -30,7 +30,6 @@
 #include <utility>
 #include <microsim/MSLane.h>
 #include <microsim/MSEdge.h>
-#include <utils/foxtools/MFXMutex.h>
 #include <utils/geom/Position.h>
 #include <utils/geom/PositionVector.h>
 #include <utils/gui/globjects/GUIGlObject.h>
@@ -346,7 +345,7 @@ private:
 
 private:
     /// The mutex used to avoid concurrent updates of the vehicle buffer
-    mutable MFXMutex myLock;
+    mutable FXMutex myLock;
 
     /// @brief special color to signify alternative coloring scheme
     static const RGBColor MESO_USE_LANE_COLOR;

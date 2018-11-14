@@ -39,7 +39,6 @@
 #undef NOMINMAX
 #endif
 
-#include <utils/foxtools/MFXMutex.h>
 #include <utils/geom/Boundary.h>
 #include <utils/geom/Position.h>
 #include <utils/common/RGBColor.h>
@@ -433,7 +432,7 @@ protected:
     std::vector<Decal> myDecals;
 
     ///@brief The mutex to use before accessing the decals list in order to avoid thread conflicts
-    MFXMutex myDecalsLock;
+    FXMutex myDecalsLock;
     ///@}
 
     ///@brief Snapshots
@@ -441,11 +440,11 @@ protected:
     std::set<SUMOTime>* myApplicationSnapshots;
 
     ///@brief The mutex to use before accessing the decals list in order to avoid thread conflicts
-    MFXMutex mySnapshotsLock;
+    FXMutex mySnapshotsLock;
     FXMutex* myApplicationSnapshotsLock;
 
     ///@brief poly draw lock
-    mutable MFXMutex myPolyDrawLock;
+    mutable FXMutex myPolyDrawLock;
 
     ///@brief List of objects for which GUIGlObject::drawGLAdditional is called
     std::map<const GUIGlObject*, int> myAdditionallyDrawn;

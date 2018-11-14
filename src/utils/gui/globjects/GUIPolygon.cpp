@@ -150,7 +150,7 @@ GUIPolygon::drawGL(const GUIVisualizationSettings& s) const {
             return;
         }
     }
-    AbstractMutex::ScopedLocker locker(myLock);
+    FXMutexLock locker(myLock);
     //if (myDisplayList == 0 || (!getFill() && myLineWidth != s.polySize.getExaggeration(s))) {
     //    storeTesselation(s.polySize.getExaggeration(s));
     //}
@@ -217,7 +217,7 @@ GUIPolygon::drawGL(const GUIVisualizationSettings& s) const {
 
 void
 GUIPolygon::setShape(const PositionVector& shape) {
-    AbstractMutex::ScopedLocker locker(myLock);
+    FXMutexLock locker(myLock);
     SUMOPolygon::setShape(shape);
     //storeTesselation(myLineWidth);
 }

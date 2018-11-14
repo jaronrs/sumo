@@ -28,11 +28,11 @@
 #include <cmath>
 #include <string>
 #include <algorithm>
+#include <fx.h>
 #include <utils/gui/globjects/GUIGLObjectPopupMenu.h>
 #include <utils/gui/windows/GUIMainWindow.h>
 #include <utils/gui/windows/GUISUMOAbstractView.h>
 #include <utils/geom/GeomHelper.h>
-#include <utils/foxtools/MFXMutex.h>
 #include <utils/gui/div/GUIParameterTableWindow.h>
 #include <utils/gui/div/GLHelper.h>
 #include <utils/gui/div/GUIGlobalSelection.h>
@@ -253,7 +253,7 @@ GUIEdge::drawGL(const GUIVisualizationSettings& s) const {
         }
     }
     if (s.scale * s.personSize.getExaggeration(s) > s.personSize.minSize) {
-        AbstractMutex::ScopedLocker locker(myLock);
+        FXMutexLock locker(myLock);
         for (std::set<MSTransportable*>::const_iterator i = myPersons.begin(); i != myPersons.end(); ++i) {
             GUIPerson* person = dynamic_cast<GUIPerson*>(*i);
             assert(person != 0);
@@ -261,7 +261,7 @@ GUIEdge::drawGL(const GUIVisualizationSettings& s) const {
         }
     }
     if (s.scale * s.containerSize.getExaggeration(s) > s.containerSize.minSize) {
-        AbstractMutex::ScopedLocker locker(myLock);
+        FXMutexLock locker(myLock);
         for (std::set<MSTransportable*>::const_iterator i = myContainers.begin(); i != myContainers.end(); ++i) {
             GUIContainer* container = dynamic_cast<GUIContainer*>(*i);
             assert(container != 0);
@@ -277,7 +277,7 @@ GUIEdge::drawMesoVehicles(const GUIVisualizationSettings& s) const {
     if (vehicleControl != nullptr) {
         // draw the meso vehicles
         vehicleControl->secureVehicles();
-        AbstractMutex::ScopedLocker locker(myLock);
+        FXMutexLock locker(myLock);
         int laneIndex = 0;
         MESegment::Queue queue;
         for (std::vector<MSLane*>::const_iterator msl = myLanes->begin(); msl != myLanes->end(); ++msl, ++laneIndex) {

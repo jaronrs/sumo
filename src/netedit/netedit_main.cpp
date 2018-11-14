@@ -36,6 +36,7 @@
 #include <utils/common/MsgHandler.h>
 #include <utils/common/SystemFrame.h>
 #include <utils/common/RandHelper.h>
+#include <utils/foxtools/MsgHandlerSynchronized.h>
 #include <utils/xml/XMLSubSys.h>
 #include <utils/gui/windows/GUIAppEnum.h>
 #include <utils/gui/images/GUITexturesHelper.h>
@@ -55,8 +56,7 @@
 int
 main(int argc, char** argv) {
     // make the output aware of threading
-    MFXMutex lock;
-    MsgHandler::assignLock(&lock);
+    MsgHandler::setFactory(&MsgHandlerSynchronized::create);
     // get the options
     OptionsCont& oc = OptionsCont::getOptions();
     // give some application descriptions

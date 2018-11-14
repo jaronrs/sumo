@@ -25,16 +25,16 @@
 // ===========================================================================
 #include <config.h>
 
+#include <fx.h>
 #include <utils/shapes/ShapeContainer.h>
 #include <utils/gui/globjects/GUIGlObject.h>
-#include <utils/foxtools/MFXMutex.h>
+
 
 // ===========================================================================
 // class declarations
 // ===========================================================================
 class SUMORTree;
 class Position;
-class MFXMutex;
 
 
 // ===========================================================================
@@ -138,11 +138,10 @@ public:
 
 private:
     /// @brief The mutex for adding/removing operations
-    mutable MFXMutex myLock;
+    mutable FXMutex myLock;
 
     /// @brief The RTree structure to add and remove visualization elements
     SUMORTree& myVis;
-
 
     /// @brief whether existing ids shall be replaced
     bool myAllowReplacement;

@@ -26,7 +26,6 @@
 #include <fx.h>
 #include <list>
 #include <cassert>
-#include <utils/foxtools/MFXMutex.h>
 
 template<class T>
 class MFXEventQue {
@@ -70,7 +69,7 @@ public:
     }
 
 private:
-    MFXMutex myMutex;
+    FXMutex myMutex;
     std::list<T> myItems;
 };
 

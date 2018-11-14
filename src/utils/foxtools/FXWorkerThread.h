@@ -27,7 +27,6 @@
 #include <list>
 #include <vector>
 #include <fx.h>
-#include <FXThread.h>
 
 
 // ===========================================================================

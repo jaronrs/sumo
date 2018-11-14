@@ -162,7 +162,7 @@ protected:
 
     FXEX::FXThreadEvent& myEventThrow;
 
-    MFXMutex mySimulationLock;
+    FXMutex mySimulationLock;
 
     /// @brief List of breakpoints
     std::vector<SUMOTime> myBreakpoints;

@@ -23,7 +23,7 @@
 #include <config.h>
 
 #include <cassert>
-#include <utils/foxtools/MFXMutex.h>
+#include <fx.h>
 #include "GUIEventControl.h"
 
 
@@ -39,14 +39,14 @@ GUIEventControl::~GUIEventControl() {
 
 void
 GUIEventControl::addEvent(Command* operation, SUMOTime execTimeStep) {
-    AbstractMutex::ScopedLocker locker(myLock);
+    FXMutexLock locker(myLock);
     MSEventControl::addEvent(operation, execTimeStep);
 }
 
 
 void
 GUIEventControl::execute(SUMOTime execTime) {
-    AbstractMutex::ScopedLocker locker(myLock);
+    FXMutexLock locker(myLock);
     MSEventControl::execute(execTime);
 }
 

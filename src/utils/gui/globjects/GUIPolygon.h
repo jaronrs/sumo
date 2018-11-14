@@ -26,7 +26,7 @@
 #include <config.h>
 
 #include <string>
-#include <utils/foxtools/MFXMutex.h>
+#include <fx.h>
 #include <utils/shapes/SUMOPolygon.h>
 #include <utils/gui/globjects/GUIGlObject_AbstractAdd.h>
 #include <utils/gui/globjects/GLIncludes.h>
@@ -113,7 +113,7 @@ protected:
 
 private:
     /// The mutex used to avoid concurrent updates of the shape
-    mutable MFXMutex myLock;
+    mutable FXMutex myLock;
 
     /// @brief id of the display list for the cached tesselation
     mutable GLuint myDisplayList;
