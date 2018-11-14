@@ -184,7 +184,7 @@ protected:
     MsgHandler(MsgType type);
 
     /// @brief destructor
-    ~MsgHandler();
+    virtual ~MsgHandler();
 
 private:
     /// @brief The function to call for new MsgHandlers, nullptr means use default constructor
