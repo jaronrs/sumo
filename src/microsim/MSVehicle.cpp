@@ -2003,7 +2003,7 @@ MSVehicle::planMoveInternal(const SUMOTime t, MSLeaderInfo ahead, DriveItemVecto
     double seen = opposite ? myState.myPos : myLane->getLength() - myState.myPos;
     myNextTurn.first = seen;
     myNextTurn.second = LINKDIR_NODIR;
-    bool encounteredTurn = false;
+    bool encounteredTurn = (MSGlobals::gLateralResolution <= 0); // next turn is only needed for sublane
     double seenNonInternal = 0;
     double seenInternal = myLane->isInternal() ? seen : 0;
     double vLinkPass = MIN2(cfModel.estimateSpeedAfterDistance(seen, v, cfModel.getMaxAccel()), laneMaxV); // upper bound
