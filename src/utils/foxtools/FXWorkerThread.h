@@ -98,6 +98,15 @@ public:
         , myNumBatches(0), myTotalMaxLoad(0.)
 #endif
         {
+#ifdef WORKLOAD_PROFILING
+            long long int timeDiff = 0;
+            for (int i = 0; i < 100; i++) {
+                const auto begin = std::chrono::high_resolution_clock::now();
+                const auto end = std::chrono::high_resolution_clock::now();
+                timeDiff += std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
+            }
+            std::cout << ("Average cost of a timing call (in ns): " + toString(timeDiff / 100.)) << std::endl;
+#endif
             while (numThreads > 0) {
                 new FXWorkerThread(*this);
                 numThreads--;
@@ -136,18 +145,18 @@ public:
          * @param[in] index index of the worker thread to use or -1 for an arbitrary one
          */
         void add(Task* const t, int index = -1) {
-#ifdef WORKLOAD_PROFILING
-            if (myRunningIndex == 0) {
-                myProfileStart = std::chrono::high_resolution_clock::now();
-                for (FXWorkerThread* const worker : myWorkers) {
-                    worker->startProfile();
-                }
-            }
-#endif
-            t->setIndex(myRunningIndex++);
             if (index < 0) {
                 index = myRunningIndex % myWorkers.size();
             }
+#ifdef WORKLOAD_PROFILING
+            if (myRunningIndex == 0) {
+                for (FXWorkerThread* const worker : myWorkers) {
+                    worker->startProfile();
+                }
+                myProfileStart = std::chrono::high_resolution_clock::now();
+            }
+#endif
+            t->setIndex(myRunningIndex++);
             myWorkers[index]->add(t);
         }
 

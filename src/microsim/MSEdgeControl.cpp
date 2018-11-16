@@ -25,6 +25,7 @@
 #include <config.h>
 
 #include <iostream>
+#include <queue>
 #include <vector>
 #include "MSEdgeControl.h"
 #include "MSGlobals.h"
@@ -95,15 +96,25 @@ MSEdgeControl::planMovements(SUMOTime t) {
             new FXWorkerThread(myThreadPool);
         }
     }
+    std::priority_queue<std::pair<int, int> > rngLoad;
+    for (int i = 0; i < MSLane::getNumRNGs(); i++) {
+        rngLoad.emplace(0, i);
+    }
 #endif
-    for (std::list<MSLane*>::iterator i = myActiveLanes.begin(); i != myActiveLanes.end();) {
-        if ((*i)->getVehicleNumber() == 0) {
+    for (std::list<MSLane*>::const_iterator i = myActiveLanes.begin(); i != myActiveLanes.end();) {
+        const int vehNum = (*i)->getVehicleNumber();
+        if (vehNum == 0) {
             myLanes[(*i)->getNumericalID()].amActive = false;
             i = myActiveLanes.erase(i);
         } else {
 #ifdef HAVE_FOX
             if (MSGlobals::gNumSimThreads > 1) {
-                myThreadPool.add((*i)->getPlanMoveTask(t), (*i)->getRNGIndex() % myThreadPool.size());
+                std::pair<int, int> minRNG = rngLoad.top();
+                (*i)->setRNGIndex(minRNG.second);
+                myThreadPool.add((*i)->getPlanMoveTask(t), minRNG.second % myThreadPool.size());
+                rngLoad.pop();
+                minRNG.first -= vehNum;
+                rngLoad.push(minRNG);
                 ++i;
                 continue;
             }

@@ -209,14 +209,19 @@ public:
     /// @brief Destructor
     virtual ~MSLane();
 
-    /// @brief return the associated RNG index
-    int getRNGIndex() const {
-        return myRNGIndex;
+    /// @brief sets the associated RNG index
+    void setRNGIndex(const int rngIndex) {
+        myRNGIndex = rngIndex;
     }
 
     /// @brief return the associated RNG
     std::mt19937* getRNG() const {
         return &myRNGs[myRNGIndex];
+    }
+
+    /// @brief return the number of RNGs
+    static int getNumRNGs() {
+        return myRNGs.size();
     }
 
     /// @name Additional initialisation
