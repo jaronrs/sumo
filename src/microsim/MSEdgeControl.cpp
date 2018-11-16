@@ -101,7 +101,7 @@ MSEdgeControl::planMovements(SUMOTime t) {
         rngLoad.emplace(0, i);
     }
 #endif
-    for (std::list<MSLane*>::const_iterator i = myActiveLanes.begin(); i != myActiveLanes.end();) {
+    for (std::list<MSLane*>::iterator i = myActiveLanes.begin(); i != myActiveLanes.end();) {
         const int vehNum = (*i)->getVehicleNumber();
         if (vehNum == 0) {
             myLanes[(*i)->getNumericalID()].amActive = false;
