@@ -49,6 +49,7 @@ class MSVehicle;
 class MSLink;
 class MSLane;
 class MSEdge;
+class MSJunctionLogic;
 
 typedef std::vector<MSEdge*> MSEdgeVector;
 typedef std::vector<const MSEdge*> ConstMSEdgeVector;
@@ -137,6 +138,11 @@ public:
     /* @brief @return whether the foe vehicle is a leader for ego
      * @note vehicles are added to myLinkLeaders when first seen as a foe */
     bool isLeader(const MSVehicle* ego, const MSVehicle* foe, bool updateLeader);
+
+    /// @brief return the underlying right-of-way and conflict matrix
+    virtual const MSJunctionLogic* getLogic() const {
+        return nullptr;
+    }
 
 protected:
     /// @brief Tye type of this junction

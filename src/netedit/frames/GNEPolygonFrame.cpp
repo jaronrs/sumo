@@ -30,6 +30,7 @@
 #include <utils/gui/images/GUIIconSubSys.h>
 #include <utils/gui/div/GLHelper.h>
 #include <utils/gui/images/GUITexturesHelper.h>
+#include <utils/gui/div/GUIUserIO.h>
 #include <netedit/GNEViewParent.h>
 #include <netedit/GNENet.h>
 #include <netedit/GNEUndoList.h>
@@ -47,6 +48,7 @@
 
 FXDEFMAP(GNEPolygonFrame::GEOPOICreator) GEOPOICreatorMap[] = {
     FXMAPFUNC(SEL_COMMAND,  MID_GNE_SET_ATTRIBUTE,      GNEPolygonFrame::GEOPOICreator::onCmdSetCoordinates),
+    FXMAPFUNC(SEL_COMMAND,  MID_CHOOSEN_OPERATION,      GNEPolygonFrame::GEOPOICreator::onCmdSetFormat),
     FXMAPFUNC(SEL_COMMAND,  MID_GNE_CREATE,             GNEPolygonFrame::GEOPOICreator::onCmdCreateGEOPOI),
 };
 
@@ -65,16 +67,19 @@ FXIMPLEMENT(GNEPolygonFrame::GEOPOICreator,     FXGroupBox,     GEOPOICreatorMap
 GNEPolygonFrame::GEOPOICreator::GEOPOICreator(GNEPolygonFrame* polygonFrameParent) : 
     FXGroupBox(polygonFrameParent->myContentFrame, "GEO POI Creator", GUIDesignGroupBoxFrame),
     myPolygonFrameParent(polygonFrameParent) {
-    // create information label
-    new FXLabel(this, "GEO Format: Lon,lat", 0, GUIDesignLabelFrameInformation);
+    // create RadioButtons for formats
+    myLonLatRadioButton = new FXRadioButton(this, "Format: Lon-Lat", this, MID_CHOOSEN_OPERATION, GUIDesignRadioButton);
+    myLatLonRadioButton = new FXRadioButton(this, "Format: Lat-Lon", this, MID_CHOOSEN_OPERATION, GUIDesignRadioButton);
+    // set lat-lon as default
+    myLatLonRadioButton->setCheck(TRUE);
     // create text field for coordinates
     myCoordinatesTextField = new FXTextField(this, GUIDesignTextFieldNCol, this, MID_GNE_SET_ATTRIBUTE, GUIDesignTextField);
     // create checkBox 
     myCenterViewAfterCreationCheckButton = new FXCheckButton(this, "Center View after creation", this, MID_GNE_SET_ATTRIBUTE, GUIDesignCheckButtonAttribute);
     // create button for create GEO POIs
-    myCreateGEOPOIButton = new FXButton(this, "Create GEO POI", nullptr, this, MID_GNE_CREATE, GUIDesignButton);
+    myCreateGEOPOIButton = new FXButton(this, "Create GEO POI (clipboard)", nullptr, this, MID_GNE_CREATE, GUIDesignButton);
     // create information label
-    myLabelCartesianPosition = new FXLabel(this, "Cartesian equivalence:\n X = give valid longitude\n Y = give valid latitude", 0, GUIDesignLabelFrameInformation);
+    myLabelCartesianPosition = new FXLabel(this, "Cartesian equivalence:\n- X = give valid longitude\n- Y = give valid latitude", 0, GUIDesignLabelFrameInformation);
 }
 
 
@@ -106,19 +111,56 @@ GNEPolygonFrame::GEOPOICreator::hideGEOPOICreatorModul() {
 
 long 
 GNEPolygonFrame::GEOPOICreator::onCmdSetCoordinates(FXObject*, FXSelector, void*) {
+    // check if input contains spaces
+    std::string input = myCoordinatesTextField->getText().text();
+    std::string inputWithoutSpaces;
+    for (const auto &i : input) {
+        if (i != ' ') {
+            inputWithoutSpaces.push_back(i);
+        }
+    }
+    // if input contains spaces, call this function again, and in other case set red text color
+    if (input.size() != inputWithoutSpaces.size()) {
+        myCoordinatesTextField->setText(inputWithoutSpaces.c_str());
+    }
+    if (inputWithoutSpaces.size() > 0) {
+        myCreateGEOPOIButton->setText("Create GEO POI");
+    } else {
+        myCreateGEOPOIButton->setText("Create GEO POI (clipboard)");
+    }
     // simply check if given value can be parsed to Position
     if (GNEAttributeCarrier::canParse<Position>(myCoordinatesTextField->getText().text())) {
         myCoordinatesTextField->setTextColor(FXRGB(0, 0, 0));
         myCoordinatesTextField->killFocus();
         // convert coordinates into lon-lat
-        Position pos = GNEAttributeCarrier::parse<Position>(myCoordinatesTextField->getText().text());
-        GeoConvHelper::getFinal().x2cartesian_const(pos);
+        Position geoPos = GNEAttributeCarrier::parse<Position>(myCoordinatesTextField->getText().text());
+        if (myLatLonRadioButton->getCheck() == TRUE) {
+            geoPos.swapXY();
+        }
+        GeoConvHelper::getFinal().x2cartesian_const(geoPos);
+        // check if GEO Position has to be swapped
         // update myLabelCartesianPosition
-        myLabelCartesianPosition->setText(("Cartesian equivalence:\n X = " + toString(pos.x()) + "\n Y = " + toString(pos.y())).c_str());
+        myLabelCartesianPosition->setText(("Cartesian equivalence:\n- X = " + toString(geoPos.x()) + "\n- Y = " + toString(geoPos.y())).c_str());
     } else {
         myCoordinatesTextField->setTextColor(FXRGB(255, 0, 0));
-        myLabelCartesianPosition->setText("Cartesian equivalence:\n X = give valid longitude\n Y = give valid latitude");
+        myLabelCartesianPosition->setText("Cartesian equivalence:\n- X = give valid longitude\n- Y = give valid latitude");
     };
+    return 1;
+}
+
+
+long 
+GNEPolygonFrame::GEOPOICreator::onCmdSetFormat(FXObject* obj, FXSelector, void*) {
+    //disable other radio button depending of selected option
+    if(obj == myLonLatRadioButton) {
+        myLonLatRadioButton->setCheck(TRUE);
+        myLatLonRadioButton->setCheck(FALSE);
+    } else if (obj == myLatLonRadioButton) {
+        myLonLatRadioButton->setCheck(FALSE);
+        myLatLonRadioButton->setCheck(TRUE);
+    }
+    // in both cases call onCmdSetCoordinates(0,0,0) to set new cartesian equivalence
+    onCmdSetCoordinates(0,0,0);
     return 1;
 }
 
@@ -126,30 +168,47 @@ GNEPolygonFrame::GEOPOICreator::onCmdSetCoordinates(FXObject*, FXSelector, void*
 long 
 GNEPolygonFrame::GEOPOICreator::onCmdCreateGEOPOI(FXObject*, FXSelector, void*) {
     // first check if current GEO Position is valid
-    if(GNEAttributeCarrier::canParse<Position>(myCoordinatesTextField->getText().text()) &&
-        myPolygonFrameParent->myShapeAttributes->areValuesValid()) {
-        // obtain shape attributes and values
-        auto valuesOfElement = myPolygonFrameParent->myShapeAttributes->getAttributesAndValues();
-        // obtain netedit attributes and values
-        myPolygonFrameParent->myNeteditAttributes->getNeteditAttributesAndValues(valuesOfElement, nullptr);
-        // generate new ID
-        valuesOfElement[SUMO_ATTR_ID] = myPolygonFrameParent->myViewNet->getNet()->generateShapeID(myPolygonFrameParent->myItemSelector->getCurrentTagProperties().getTag());
-        // force GEO attribute to true and obain position
-        valuesOfElement[SUMO_ATTR_GEO] = "true";
-        // convert coordinates into lon-lat
-        Position pos = GNEAttributeCarrier::parse<Position>(myCoordinatesTextField->getText().text());
-        GeoConvHelper::getFinal().x2cartesian_const(pos);
-        valuesOfElement[SUMO_ATTR_POSITION] = toString(pos);
-        // return ADDSHAPE_SUCCESS if POI was sucesfully created
-        if (myPolygonFrameParent->addPOI(valuesOfElement)) {
-            WRITE_WARNING("GEO POI sucesfully created");
-            // check if view has to be centered over created GEO POI
-            if(myCenterViewAfterCreationCheckButton->getCheck() == TRUE) {
-                // create a boundary over given GEO Position and center view over it
-                Boundary centerPosition;
-                centerPosition.add(pos);
-                centerPosition = centerPosition.grow(10);
-                myPolygonFrameParent->myViewNet->getViewParent()->getView()->centerTo(centerPosition);
+    if (myPolygonFrameParent->myShapeAttributes->areValuesValid()) {
+        std::string geoPosStr = myCoordinatesTextField->getText().text();
+        if (geoPosStr.empty()) {
+            // use clipboard
+            WRITE_WARNING("Using clipboard");
+            geoPosStr = GUIUserIO::copyFromClipboard(*getApp());
+            myCoordinatesTextField->setText(geoPosStr.c_str());
+            // remove spaces, update cartesian value
+            onCmdSetCoordinates(0, 0, 0);
+            geoPosStr = myCoordinatesTextField->getText().text();
+            myCoordinatesTextField->setText("");
+            myCreateGEOPOIButton->setText("Create GEO POI (clipboard)");
+        }
+        if (GNEAttributeCarrier::canParse<Position>(geoPosStr)) { 
+            // obtain shape attributes and values
+            auto valuesOfElement = myPolygonFrameParent->myShapeAttributes->getAttributesAndValues();
+            // obtain netedit attributes and values
+            myPolygonFrameParent->myNeteditAttributes->getNeteditAttributesAndValues(valuesOfElement, nullptr);
+            // generate new ID
+            valuesOfElement[SUMO_ATTR_ID] = myPolygonFrameParent->myViewNet->getNet()->generateShapeID(myPolygonFrameParent->myItemSelector->getCurrentTagProperties().getTag());
+            // force GEO attribute to true and obain position
+            valuesOfElement[SUMO_ATTR_GEO] = "true";
+            Position geoPos = GNEAttributeCarrier::parse<Position>(geoPosStr);
+            // convert coordinates into lon-lat
+            if (myLatLonRadioButton->getCheck() == TRUE) {
+                geoPos.swapXY();
+            }
+            GeoConvHelper::getFinal().x2cartesian_const(geoPos);
+            valuesOfElement[SUMO_ATTR_POSITION] = toString(geoPos);
+            // return ADDSHAPE_SUCCESS if POI was sucesfully created
+            if (myPolygonFrameParent->addPOI(valuesOfElement)) {
+                // check if view has to be centered over created GEO POI
+                if(myCenterViewAfterCreationCheckButton->getCheck() == TRUE) {
+                    // create a boundary over given GEO Position and center view over it
+                    Boundary centerPosition;
+                    centerPosition.add(geoPos);
+                    centerPosition = centerPosition.grow(10);
+                    myPolygonFrameParent->myViewNet->getViewParent()->getView()->centerTo(centerPosition);
+                }
+            } else {
+                WRITE_WARNING("Could not create GEO POI");
             }
         }
     }
@@ -198,7 +257,7 @@ GNEPolygonFrame::show() {
 
 
 GNEPolygonFrame::AddShapeResult
-GNEPolygonFrame::processClick(const Position& clickedPosition, GNELane* lane) {
+GNEPolygonFrame::processClick(const Position& clickedPosition, const GNEViewNet::ObjectsUnderCursor &objectsUnderCursor) {
     // Declare map to keep values
     std::map<SumoXMLAttr, std::string> valuesOfElement;
     // check if current selected shape is valid
@@ -211,7 +270,7 @@ GNEPolygonFrame::processClick(const Position& clickedPosition, GNELane* lane) {
         // obtain shape attributes and values
         valuesOfElement = myShapeAttributes->getAttributesAndValues();
         // obtain netedit attributes and values
-        myNeteditAttributes->getNeteditAttributesAndValues(valuesOfElement, lane);
+        myNeteditAttributes->getNeteditAttributesAndValues(valuesOfElement, objectsUnderCursor.getLaneFront());
         // generate new ID
         valuesOfElement[SUMO_ATTR_ID] = myViewNet->getNet()->generateShapeID(myItemSelector->getCurrentTagProperties().getTag());
         // obtain position
@@ -226,7 +285,7 @@ GNEPolygonFrame::processClick(const Position& clickedPosition, GNELane* lane) {
         }
     } else  if (myItemSelector->getCurrentTagProperties().getTag() == SUMO_TAG_POILANE) {
         // abort if lane is nullptr
-        if (lane == nullptr) {
+        if (objectsUnderCursor.getLaneFront() == nullptr) {
             WRITE_WARNING(toString(SUMO_TAG_POILANE) + " can be only placed over lanes");
             return ADDSHAPE_INVALID;
         }
@@ -238,13 +297,13 @@ GNEPolygonFrame::processClick(const Position& clickedPosition, GNELane* lane) {
         // obtain shape attributes and values
         valuesOfElement = myShapeAttributes->getAttributesAndValues();
         // obtain netedit attributes and values
-        myNeteditAttributes->getNeteditAttributesAndValues(valuesOfElement, lane);
+        myNeteditAttributes->getNeteditAttributesAndValues(valuesOfElement, objectsUnderCursor.getLaneFront());
         // generate new ID
         valuesOfElement[SUMO_ATTR_ID] = myViewNet->getNet()->generateShapeID(myItemSelector->getCurrentTagProperties().getTag());
         // obtain Lane
-        valuesOfElement[SUMO_ATTR_LANE] = lane->getID();
+        valuesOfElement[SUMO_ATTR_LANE] = objectsUnderCursor.getLaneFront()->getID();
         // obtain position over lane
-        valuesOfElement[SUMO_ATTR_POSITION] = toString(lane->getShape().nearest_offset_to_point2D(clickedPosition));
+        valuesOfElement[SUMO_ATTR_POSITION] = toString(objectsUnderCursor.getLaneFront()->getShape().nearest_offset_to_point2D(clickedPosition));
         // return ADDSHAPE_SUCCESS if POI was sucesfully created
         if (addPOILane(valuesOfElement)) {
             return ADDSHAPE_SUCCESS;

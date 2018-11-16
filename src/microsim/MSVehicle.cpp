@@ -64,6 +64,7 @@
 #include "MSVehicleControl.h"
 #include "MSVehicleTransfer.h"
 #include "MSGlobals.h"
+#include "MSJunctionLogic.h"
 #include "MSStoppingPlace.h"
 #include "MSParkingArea.h"
 #include "devices/MSDevice_Transportable.h"
@@ -864,6 +865,8 @@ MSVehicle::MSVehicle(SUMOVehicleParameter* pars, const MSRoute* route,
     myStopDist(std::numeric_limits<double>::max()),
     myCollisionImmunity(-1),
     myCachedPosition(Position::INVALID),
+    myJunctionEntryTime(SUMOTime_MAX),
+    myJunctionConflictEntryTime(SUMOTime_MAX),
     myEdgeWeights(nullptr),
     myInfluencer(nullptr) {
     if (!(*myCurrEdge)->isTazConnector()) {
@@ -2539,7 +2542,7 @@ MSVehicle::checkLinkLeader(const MSLink* link, const MSLane* lane, double seen,
             // leader is a pedestrian. Passing 'this' as a dummy.
             //std::cout << SIMTIME << " veh=" << getID() << " is blocked on link to " << (*link)->getViaLaneOrLane()->getID() << " by pedestrian. dist=" << it->distToCrossing << "\n";
             adaptToLeader(std::make_pair(this, -1), seen, lastLink, lane, v, vLinkPass, it->distToCrossing);
-        } else if (link->isLeader(this, leader)) {
+        } else if (isLeader(link, leader)) {
             if (MSGlobals::gLateralResolution > 0 &&
                     // sibling link (XXX: could also be partial occupator where this check fails)
                     &leader->getLane()->getEdge() == &lane->getEdge()) {
@@ -2565,6 +2568,14 @@ MSVehicle::checkLinkLeader(const MSLink* link, const MSLane* lane, double seen,
                 }
 #endif
             } else {
+#ifdef DEBUG_PLAN_MOVE
+                if (DEBUG_COND) {
+                    std::cout << SIMTIME << " veh=" << getID() << " linkLeader=" << leader->getID() 
+                        << " ET=" << myJunctionEntryTime << " lET=" << leader->myJunctionEntryTime 
+                        << " CET=" << myJunctionConflictEntryTime << " lCET=" << leader->myJunctionConflictEntryTime 
+                        << "\n";
+                }
+#endif
                 adaptToLeader(it->vehAndGap, seen, lastLink, lane, v, vLinkPass, it->distToCrossing);
             }
             if (lastLink != nullptr) {
@@ -2586,14 +2597,15 @@ MSVehicle::checkLinkLeader(const MSLink* link, const MSLane* lane, double seen,
                     // (or maybe we are already on the junction and the leader is a partial occupator beyond)
                     lastLink->mySetRequest = false;
                 }
-                // other vehicles may become junction leader when yielding
-                link->passedJunction(this);
             }
         }
 #ifdef DEBUG_PLAN_MOVE_LEADERINFO
         else {
             if (DEBUG_COND) {
-                std::cout << SIMTIME << " veh=" << getID() << " ignoring leader " << leader->getID() << "\n";
+                std::cout << SIMTIME << " veh=" << getID() << " ignoring leader " << leader->getID() 
+                    << " ET=" << myJunctionEntryTime << " lET=" << leader->myJunctionEntryTime 
+                    << " CET=" << myJunctionConflictEntryTime << " lCET=" << leader->myJunctionConflictEntryTime 
+                    << "\n";
             }
         }
 #endif
@@ -2805,6 +2817,16 @@ MSVehicle::processLinkApproaches(double& vSafe, double& vSafeMin, double& vSafeM
                 break;
             }
         } else {
+            if (link != nullptr && link->isExitLink() && myLane->isInternal() && link->getJunction() == myLane->getEdge().getToJunction()) {
+                // blocked on the junction. yield request so other vehicles may
+                // become junction leader
+#ifdef DEBUG_EXEC_MOVE
+                if (DEBUG_COND) {
+                    std::cout << SIMTIME << " reseting junctionEntryTime at junction '" << link->getJunction()->getID() << "' beause of non-request exitLink\n";
+                }
+#endif
+                myJunctionConflictEntryTime = SUMOTime_MAX;
+            }
             // we have: i->link == 0 || !i->setRequest
             vSafe = dpi.myVLinkWait;
             if (vSafe < getSpeed()) {
@@ -3247,12 +3269,26 @@ MSVehicle::processLaneAdvances(std::vector<MSLane*>& passedLanes, bool& moved, s
                     myState.myPos -= myLane->getLength();
                     assert(myState.myPos > 0);
                     enterLaneAtMove(approachedLane);
-                    if (MSGlobals::gUsingInternalLanes) {
-                        // erase leaders when past the junction
-                        if (link->getViaLane() == nullptr) {
-                            link->passedJunction(this);
-                        }
+                    if (link->isEntryLink()) {
+                        myJunctionEntryTime = MSNet::getInstance()->getCurrentTimeStep();
                     }
+                    if (link->isConflictEntryLink()) {
+                        myJunctionConflictEntryTime = MSNet::getInstance()->getCurrentTimeStep();
+                    }
+                    if (link->isExitLink()) {
+                        // passed junction, reset for approaching the next one
+                        myJunctionEntryTime = SUMOTime_MAX;
+                        myJunctionConflictEntryTime = SUMOTime_MAX;
+                    }
+#ifdef DEBUG_PLAN_MOVE_LEADERINFO
+                    if (DEBUG_COND) {
+                        std::cout << "Update junctionTimes link=" << link->getViaLaneOrLane()->getID() 
+                            << " entry=" << link->isEntryLink() << " conflict=" << link->isConflictEntryLink() << " exit=" << link->isExitLink() 
+                            << " ET=" << myJunctionEntryTime
+                            << " CET=" << myJunctionConflictEntryTime
+                            << "\n";
+                    }
+#endif
                     if (hasArrived()) {
                         break;
                     }
@@ -3509,6 +3545,25 @@ MSVehicle::updateState(double vNext) {
                   << " pos=" << myState.myPos << " newPos=" << myState.myPos + deltaPos << std::endl;
     }
 #endif
+    double decelPlus = -myAcceleration - getCarFollowModel().getMaxDecel() - NUMERICAL_EPS;
+    if (decelPlus > 0) {
+        const double previousAcceleration = SPEED2ACCEL(myState.mySpeed - myState.myPreviousSpeed);
+        if (myAcceleration + NUMERICAL_EPS < previousAcceleration) {
+            // vehicle brakes beyond wished maximum deceleration (only warn at the start of the braking manoeuvre)
+            decelPlus += 2 * NUMERICAL_EPS;
+            const double emergencyFraction = decelPlus / MAX2(NUMERICAL_EPS, getCarFollowModel().getEmergencyDecel() - getCarFollowModel().getMaxDecel());
+            if (emergencyFraction >= MSGlobals::gEmergencyDecelWarningThreshold) {
+                WRITE_WARNING("Vehicle '" + getID() 
+                        + "' performs emergency braking with decel=" + toString(myAcceleration) 
+                        + " wished=" + toString(getCarFollowModel().getMaxDecel()) 
+                        + " severity=" + toString(emergencyFraction) 
+                        //+ " decelPlus=" + toString(decelPlus) 
+                        //+ " prevAccel=" + toString(previousAcceleration) 
+                        //+ " reserve=" + toString(MAX2(NUMERICAL_EPS, getCarFollowModel().getEmergencyDecel() - getCarFollowModel().getMaxDecel())) 
+                        + ", time=" + time2string(MSNet::getInstance()->getCurrentTimeStep()) + ".");
+            }
+        }
+    }
 
     myState.myPreviousSpeed = myState.mySpeed;
     myState.mySpeed = MAX2(vNext, 0.);
@@ -5518,6 +5573,83 @@ MSVehicle::passingMinor() const {
     return false;
 }
 
+bool 
+MSVehicle::isLeader(const MSLink* link, const MSVehicle* veh) const {
+    assert(link->fromInternalLane());
+    if (veh == nullptr) {
+        return false;
+    }
+    if (!myLane->isInternal() || myLane->getEdge().getToJunction() != link->getJunction()) {
+        // if this vehicle is not yet on the junction, every vehicle is a leader
+        return true;
+    }
+    const MSLane* foeLane = veh->getLane();
+    if (foeLane->isInternal()) {
+        if (foeLane->getEdge().getFromJunction() == link->getJunction()) {
+            SUMOTime egoET = myJunctionConflictEntryTime;
+            SUMOTime foeET = veh->myJunctionEntryTime;
+            // check relationship between link and foeLane
+            if (foeLane->getEdge().getNormalBefore() == link->getInternalLaneBefore()->getEdge().getNormalBefore()) {
+                // we are entering the junction from the same edge
+                egoET = myJunctionEntryTime;
+            } else {
+                const MSLink* foeLink = foeLane->getIncomingLanes()[0].viaLink;
+                const MSJunctionLogic* logic = link->getJunction()->getLogic();
+                assert(logic != nullptr);
+#ifdef DEBUG_PLAN_MOVE_LEADERINFO
+                if (DEBUG_COND) {
+                    std::cout << SIMTIME 
+                        << " foeLane=" << foeLane->getID()
+                        << " foeLink=" << foeLink->getViaLaneOrLane()->getID()
+                        << " linkIndex=" << link->getIndex()
+                        << " foeLinkIndex=" << foeLink->getIndex()
+                        << " response=" << logic->getResponseFor(link->getIndex()).test(foeLink->getIndex())
+                        << "\n";
+                }
+#endif
+                if (!logic->getResponseFor(link->getIndex()).test(foeLink->getIndex())) {
+                    // if we have right of way over the foe, entryTime does not matter
+                    foeET = veh->myJunctionConflictEntryTime;
+                }
+            }
+            if (egoET == foeET) {
+                // try to use speed as tie braker
+                if (getSpeed() == veh->getSpeed()) {
+                    // use ID as tie braker
+#ifdef DEBUG_PLAN_MOVE_LEADERINFO
+                    if (DEBUG_COND) {
+                        std::cout << SIMTIME << " veh=" << getID() << " equal ET " << egoET << " with foe " << veh->getID() 
+                            << " foeIsLeaderByID=" << (getID() < veh->getID()) << "\n";
+                    }
+#endif
+                    return getID() < veh->getID();
+                } else {
+#ifdef DEBUG_PLAN_MOVE_LEADERINFO
+                    if (DEBUG_COND) {
+                        std::cout << SIMTIME << " veh=" << getID() << " equal ET " << egoET << " with foe " << veh->getID() 
+                            << " foeIsLeaderBySpeed=" << (getSpeed() < veh->getSpeed()) 
+                            << " v=" << getSpeed() << " foeV=" << veh->getSpeed()
+                            << "\n";
+                    }
+#endif
+                    return getSpeed() < veh->getSpeed();
+                }
+            } else {
+                // leader was on the junction first
+#ifdef DEBUG_PLAN_MOVE_LEADERINFO
+                if (DEBUG_COND) std::cout << "       egoET=" << egoET << " foeET=" << foeET << " isLeader=" << (egoET > foeET) << "\n";
+#endif
+                return egoET > foeET;
+            }
+        } else {
+            // vehicle can only be partially on the junction. Must be a leader
+            return true;
+        }
+    } else {
+        // vehicle can only be partially on the junction. Must be a leader
+        return true;
+    }
+}
 
 void
 MSVehicle::saveState(OutputDevice& out) {

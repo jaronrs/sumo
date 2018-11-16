@@ -243,6 +243,9 @@ public:
         /// @brief hide TAZ child default parameters Modul
         void hideTAZChildDefaultParametersModul();
 
+        /// @brief update "select edges button"
+        void updateSelectEdgesButton();
+
         /// @brief get default TAZSource weight
         double getDefaultTAZSourceWeight() const;
 
@@ -364,9 +367,6 @@ public:
 
         /// @brief textField for TAZ Sink weight
         FXTextField* myTextFieldTAZSinkWeight;
-
-        /// @brief button for select edges of current selection
-        FXButton *mySelectEdgesOfSelection;
 
         /// @brief Statistics labels
         FXLabel *myStatisticsLabel;
@@ -512,11 +512,10 @@ public:
 
     /**@brief process click over Viewnet
     * @param[in] clickedPosition clicked position over ViewNet
-    * @param[in] TAZ clicked TAZ (can be null)
-    * @param[in] edge clicked edge (can be null)
+    * @param[in] objectsUnderCursor objects under cursors
     * @return true if something (select TAZ or add edge) was sucefully done
     */
-    bool processClick(const Position& clickedPosition, GNETAZ* taz, GNEEdge* edge);
+    bool processClick(const Position& clickedPosition, const GNEViewNet::ObjectsUnderCursor &objectsUnderCursor);
 
     /// @brief process selection of edges in view net
     void processEdgeSelection(const std::vector<GNEEdge*>& edges);
@@ -542,6 +541,9 @@ protected:
     
     /// @brief add or remove a TAZSource and a TAZSink, or remove it if edge is in the list of TAZ Childs
     bool addOrRemoveTAZMember(GNEEdge *edge);
+
+    /// @brief drop all TAZSources and TAZ Sinks of current TAZ
+    void dropTAZMembers();
 
 private:
     /// @brief current TAZ

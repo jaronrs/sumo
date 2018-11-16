@@ -138,5 +138,7 @@ MSJunction::isLeader(const MSVehicle* ego, const MSVehicle* foe, bool updateLead
         return false;
     }
 }
+
+
 /****************************************************************************/
 

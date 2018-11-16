@@ -545,8 +545,6 @@ enum {
     MID_GNE_SET_ATTRIBUTE_BOOL,
     /// @brief attribute edited trought dialog
     MID_GNE_SET_ATTRIBUTE_DIALOG,
-    /// @brief use selected elements
-    MID_GNE_USE_SELECTED,
     /// @brief select items
     MID_GNE_SELECT,
     /// @}
@@ -601,6 +599,10 @@ enum {
     MID_GNE_INSPECTORFRAME_COPYTEMPLATE,
     /// @brief go back to the previous element
     MID_GNE_INSPECTORFRAME_GOBACK,
+    /// @brief inspect next element
+    MID_GNE_INSPECTORFRAME_NEXT,
+    /// @brief inspect previous element
+    MID_GNE_INSPECTORFRAME_PREVIOUS,
     /// @}
 
 

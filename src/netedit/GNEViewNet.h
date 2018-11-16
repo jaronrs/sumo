@@ -112,10 +112,13 @@ public:
         ObjectsUnderCursor();
 
         /// @brief update objects under cursor (Called only in onLeftBtnPress(...) function)
-        void updateObjectUnderCursor(GUIGlID glIDObject, GNEPoly* editedPolyShape, FXEvent* ev);
+        void updateObjectUnderCursor(const std::vector<GUIGlObject*> &GUIGlObjects, GNEPoly* editedPolyShape, FXEvent* ev);
 
         /// @brief swap lane to edge
         void swapLane2Edge();
+
+        /// @brief set created junction
+        void setCreatedJunction(GNEJunction* junction);
 
         /// @brief check if SHIFT key was pressed during click
         bool shiftKeyPressed() const;
@@ -123,52 +126,103 @@ public:
         /// @brief check if CONTROL key was pressed during click
         bool controlKeyPressed() const;
 
-        /// @brief information of event of onLeftBtnPress
-        FXEvent* eventInfo;
+        /// @brief get front GUI GL ID (or a pointer to nullptr if there isn't)
+        GUIGlID getGlIDFront() const;
 
-        /// @brief GUI GL ID
-        GUIGlID glID;
+        /// @brief get front GUI GL object type (or a pointer to nullptr if there isn't)
+        GUIGlObjectType getGlTypeFront() const;
 
-        /// @brief GUI GL object type
-        GUIGlObjectType glType;
+        /// @brief get front attribute carrier (or a pointer to nullptr if there isn't)
+        GNEAttributeCarrier* getAttributeCarrierFront() const;
 
-        /// @brief attribute carrier
-        GNEAttributeCarrier* attributeCarrier;
+        /// @brief get front net element (or a pointer to nullptr if there isn't)
+        GNENetElement* getNetElementFront() const;
 
-        /// @brief net element
-        GNENetElement* netElement;
+        /// @brief get front additional element (or a pointer to nullptr if there isn't)
+        GNEAdditional* getAdditionalFront() const;
 
-        /// @brief additional element
-        GNEAdditional* additional;
+        /// @brief get front shape element (or a pointer to nullptr if there isn't)
+        GNEShape* getShapeFront() const;
 
-        /// @brief shape element (Poly and POIs)
-        GNEShape* shape;
+        /// @brief get front junction (or a pointer to nullptr if there isn't)
+        GNEJunction* getJunctionFront() const;
 
-        /// @brief junction
-        GNEJunction* junction;
+        /// @brief get front edge (or a pointer to nullptr if there isn't)
+        GNEEdge* getEdgeFront() const;
 
-        /// @brief edge
-        GNEEdge* edge;
+        /// @brief get front lane (or a pointer to nullptr if there isn't)
+        GNELane* getLaneFront() const;
 
-        /// @brief lane
-        GNELane* lane;
+        /// @brief get front crossing (or a pointer to nullptr if there isn't)
+        GNECrossing* getCrossingFront() const;
 
-        /// @brief crossing
-        GNECrossing* crossing;
+        /// @brief get front connection (or a pointer to nullptr if there isn't)
+        GNEConnection* getConnectionFront() const;
 
-        /// @brief connection
-        GNEConnection* connection;
+        /// @brief get front TAZ (or a pointer to nullptr if there isn't)
+        GNETAZ* getTAZFront() const;
 
-        /// @brief TAZ element (needed because uses a shape instead a position)
-        GNETAZ* taz;
+        /// @brief get front POI (or a pointer to nullptr if there isn't)
+        GNEPOI* getPOIFront() const;
 
-        /// @brief POI
-        GNEPOI* poi;
+        /// @brief get front Poly (or a pointer to nullptr if there isn't)
+        GNEPoly* getPolyFront() const;
 
-        /// @brief Poly
-        GNEPoly* poly;
+        /// @brief get vector with clicked ACs
+        const std::vector<GNEAttributeCarrier*> &getClickedAttributeCarriers() const;
+
+        /// @brief get index of lane vinculated with this edge parent (return 0 if myLaneIndex is empty)
+        int getLaneIndex(GNEEdge *edgeParent) const;
 
     private:
+        /// @brief information of event of onLeftBtnPress
+        FXEvent* myEventInfo;
+
+        /// @brief vector with the clicked GUIGlObjects
+        std::vector<GUIGlObject*> myGUIGlObjects;
+
+        /// @brief vector with the clicked attribute carriers
+        std::vector<GNEAttributeCarrier*> myAttributeCarriers;
+
+        /// @brief vector with the clicked net elements
+        std::vector<GNENetElement*> myNetElements;
+
+        /// @brief vector with the clicked additional elements
+        std::vector<GNEAdditional*> myAdditionals;
+
+        /// @brief vector with the clicked shape elements (Poly and POIs)
+        std::vector<GNEShape*> myShapes;
+
+        /// @brief vector with the clicked junctions
+        std::vector<GNEJunction*> myJunctions;
+
+        /// @brief vector with the clicked edges
+        std::vector<GNEEdge*> myEdges;
+
+        /// @brief vector with the clicked lanes
+        std::vector<GNELane*> myLanes;
+
+        /// @brief vector with the clicked crossings
+        std::vector<GNECrossing*> myCrossings;
+
+        /// @brief vector with the clicked connections
+        std::vector<GNEConnection*> myConnections;
+
+        /// @brief vector with the clicked TAZ elements (needed because uses a shape instead a position)
+        std::vector<GNETAZ*> myTAZs;
+
+        /// @brief vector with the clicked POIs
+        std::vector<GNEPOI*> myPOIs;
+
+        /// @brief vector with the clicked Polys
+        std::vector<GNEPoly*> myPolys;
+
+        /// @index of lanes swapped to edge
+        std::vector<int> myLaneIndex;
+
+        /// @brief invert GUIGlObjects
+        void sortGUIGlObjectsByAltitude(const std::vector<GUIGlObject*> &GUIGlObjects);
+
         /// @brief Invalidated copy constructor.
         ObjectsUnderCursor(const ObjectsUnderCursor&) = delete;
 
@@ -211,6 +265,9 @@ public:
 
     ///@brief recalibrate color scheme according to the current value range
     void buildColorRainbow(const GUIVisualizationSettings& s, GUIColorScheme& scheme, int active, GUIGlObjectType objectType);
+
+    //@brief open object dialog
+    void openObjectDialog();
 
     /// @name overloaded handlers
     /// @{

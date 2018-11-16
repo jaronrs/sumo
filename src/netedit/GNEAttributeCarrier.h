@@ -568,9 +568,6 @@ public:
     /// @brief check if lanes are consecutives
     static bool lanesConsecutives(const std::vector<GNELane*>& lanes);
 
-    /// @brief default value for invalid positions (used by POIs and Polygons)
-    static const double INVALID_POSITION;
-
     /// @brief Parse attribute from XML and show warnings if there are problems parsing it
     template <typename T>
     static T parseAttributeFromXML(const SUMOSAXAttributes& attrs, const std::string& objectID, const SumoXMLTag tag, const SumoXMLAttr attribute, bool& abort) {
@@ -854,9 +851,6 @@ public:
     /// @brief function to calculate circle resolution for all circles drawn in drawGL(...) functions
     static int getCircleResolution(const GUIVisualizationSettings& settings);
 
-    /// @brief dummy TagProperty used for reference some elements (for Example, dummyEdge or some Frame Moduls)
-    static TagProperties dummyTagProperty;
-
 protected:
     /// @brief method for setting the attribute and nothing else (used in GNEChange_Attribute)
     virtual void setAttribute(SumoXMLAttr key, const std::string& value) = 0;
@@ -869,6 +863,9 @@ protected:
 
     /// @brief boolean to check if this AC is selected (instead of GUIGlObjectStorage)
     bool mySelected;
+
+    /// @brief dummy TagProperty used for reference some elements (for Example, dummyEdge)
+    static TagProperties dummyTagProperty;
 
 private:
     /// @brief fill Attribute Carriers

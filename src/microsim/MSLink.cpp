@@ -853,9 +853,24 @@ MSLink::getViaLane() const {
 
 
 bool
+MSLink::isEntryLink() const {
+    if (MSGlobals::gUsingInternalLanes) {
+        return myInternalLane != nullptr && myInternalLaneBefore == nullptr;
+    } else {
+        return false;
+    }
+}
+
+bool
+MSLink::isConflictEntryLink() const {
+    // either a non-cont entry link or the link after a cont-link
+    return !myAmCont && (isEntryLink() || (myInternalLaneBefore != nullptr && myInternalLane != nullptr));
+}
+
+bool
 MSLink::isExitLink() const {
     if (MSGlobals::gUsingInternalLanes) {
-        return getInternalLaneBefore() != nullptr && myLane->getEdge().getFunction() == EDGEFUNC_NORMAL;
+        return myInternalLaneBefore != nullptr && myInternalLane == nullptr;
     } else {
         return false;
     }
@@ -892,7 +907,7 @@ MSLink::isInternalJunctionLink() const {
 
 bool
 MSLink::fromInternalLane() const {
-    return isExitLink() || isInternalJunctionLink();
+    return myInternalLaneBefore != nullptr;
 }
 
 MSLink::LinkLeaders
@@ -1152,23 +1167,6 @@ MSLink::computeParallelLink(int direction) {
     }
 }
 
-void
-MSLink::passedJunction(const MSVehicle* vehicle) const {
-    if (myJunction != nullptr) {
-        myJunction->passedJunction(vehicle);
-    }
-}
-
-
-bool
-MSLink::isLeader(const MSVehicle* ego, const MSVehicle* foe, bool updateLeader) const {
-    if (myJunction != nullptr) {
-        return myJunction->isLeader(ego, foe, updateLeader);
-    } else {
-        // unregulated junction
-        return false;
-    }
-}
 
 const MSLane*
 MSLink::getInternalLaneBefore() const {

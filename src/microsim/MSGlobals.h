@@ -122,6 +122,10 @@ public:
 
     /// how many threads to use for simulation
     static int gNumSimThreads;
+
+    /// treshold for warning about strong deceleration
+    static double gEmergencyDecelWarningThreshold;
+
 };
 
 

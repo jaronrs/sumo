@@ -68,5 +68,6 @@ bool MSGlobals::gComputeLC;
 
 int MSGlobals::gNumSimThreads;
 
+double MSGlobals::gEmergencyDecelWarningThreshold(1);
 /****************************************************************************/
 

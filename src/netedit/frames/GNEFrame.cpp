@@ -114,8 +114,7 @@ FXIMPLEMENT(GNEFrame::NeteditAttributes,        FXGroupBox,         NeteditAttri
 
 GNEFrame::ItemSelector::ItemSelector(GNEFrame* frameParent, GNEAttributeCarrier::TAGProperty type, bool onlyDrawables) :
     FXGroupBox(frameParent->myContentFrame, "Element", GUIDesignGroupBoxFrame),
-    myFrameParent(frameParent),
-    myCurrentTagProperties(GNEAttributeCarrier::dummyTagProperty) {
+    myFrameParent(frameParent) {
     // first check that property is valid
     switch (type)     {
         case GNEAttributeCarrier::TAGProperty::TAGPROPERTY_NETELEMENT:
@@ -211,11 +210,6 @@ GNEFrame::ItemSelector::onCmdSelectItem(FXObject*, FXSelector, void*) {
     // Write Warning in console if we're in testing mode
     WRITE_DEBUG("Selected invalid item in ItemSelector");
     return 1;
-}
-
-
-GNEFrame::ItemSelector::ItemSelector() :
-    myCurrentTagProperties(GNEAttributeCarrier::dummyTagProperty) {
 }
 
 // ---------------------------------------------------------------------------
@@ -442,8 +436,7 @@ long GNEFrame::ACAttributeRow::onCmdSetColorAttribute(FXObject*, FXSelector, voi
 
 GNEFrame::ACAttributes::ACAttributes(GNEFrame* frameParent) :
     FXGroupBox(frameParent->myContentFrame, "Internal attributes", GUIDesignGroupBoxFrame),
-    myFrameParent(frameParent),
-    myTagProperties(GNEAttributeCarrier::dummyTagProperty) {
+    myFrameParent(frameParent) {
 
     // Create single parameters
     for (int i = 0; i < GNEAttributeCarrier::getHigherNumberOfAttributes(); i++) {
@@ -552,11 +545,6 @@ GNEFrame::ACAttributes::onCmdHelp(FXObject*, FXSelector, void*) {
     return 1;
 }
 
-
-GNEFrame::ACAttributes::ACAttributes() :
-    myTagProperties(GNEAttributeCarrier::dummyTagProperty) {
-}
-
 // ---------------------------------------------------------------------------
 // GNEFrame::ACHierarchy - methods
 // ---------------------------------------------------------------------------
@@ -649,9 +637,10 @@ GNEFrame::ACHierarchy::onCmdDeleteItem(FXObject*, FXSelector, void*) {
     // check if inspector frame has to be shown again
     if (currentInspectedACs.size() == 1) {
         if (currentInspectedACs.front() != myRightClickedAC) {
-            myFrameParent->getViewNet()->getViewParent()->getInspectorFrame()->inspectElement(currentInspectedACs.front());
+            myFrameParent->getViewNet()->getViewParent()->getInspectorFrame()->inspectSingleElement(currentInspectedACs.front());
         } else {
-            myFrameParent->getViewNet()->getViewParent()->getInspectorFrame()->inspectElement(nullptr);
+            // inspect a nullprt element to reset inspector frame
+            myFrameParent->getViewNet()->getViewParent()->getInspectorFrame()->inspectSingleElement(nullptr);
         }
     }
     return 1;
