@@ -242,9 +242,9 @@ private:
 
 #ifdef HAVE_FOX
     FXWorkerThread::Pool myThreadPool;
+#endif
 
     std::priority_queue<std::pair<int, int> > myRNGLoad;
-#endif
 
 private:
     /// @brief Copy constructor.
