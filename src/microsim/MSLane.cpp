@@ -1154,12 +1154,14 @@ MSLane::planMovements(SUMOTime t) {
     }
 }
 
+
 void 
-MSLane::setJunctionApproaches(const SUMOTime t) {
-    for (MSVehicle* veh : myVehicles) {
+MSLane::setJunctionApproaches(const SUMOTime t) const {
+    for (MSVehicle* const veh : myVehicles) {
         veh->setApproachingForAllLinks(t);
     }
 }
+
 
 void
 MSLane::updateLeaderInfo(const MSVehicle* veh, VehCont::reverse_iterator& vehPart, VehCont::reverse_iterator& vehRes, MSLeaderInfo& ahead) const {
@@ -1600,8 +1602,8 @@ MSLane::handleCollisionBetween(SUMOTime timestep, const std::string& stage, MSVe
 }
 
 
-bool
-MSLane::executeMovements(SUMOTime t, std::vector<MSLane*>& lanesWithVehiclesToIntegrate) {
+void
+MSLane::executeMovements(const SUMOTime t) {
     // iterate over vehicles in reverse so that move reminders will be called in the correct order
     for (VehCont::reverse_iterator i = myVehicles.rbegin(); i != myVehicles.rend();) {
         MSVehicle* veh = *i;
@@ -1627,7 +1629,7 @@ MSLane::executeMovements(SUMOTime t, std::vector<MSLane*>& lanesWithVehiclesToIn
             } else {
                 // vehicle has entered a new lane (leaveLane and workOnMoveReminders were already called in MSVehicle::executeMove)
                 target->myVehBuffer.push_back(veh);
-                lanesWithVehiclesToIntegrate.push_back(target);
+                MSNet::getInstance()->getEdgeControl().needsVehicleIntegration(target);
             }
         } else if (veh->isParking()) {
             // vehicle started to park
@@ -1702,9 +1704,14 @@ MSLane::executeMovements(SUMOTime t, std::vector<MSLane*>& lanesWithVehiclesToIn
     }
     if (MSGlobals::gLateralResolution > 0) {
         // trigger sorting of vehicles as their order may have changed
-        lanesWithVehiclesToIntegrate.push_back(this);
+        MSNet::getInstance()->getEdgeControl().needsVehicleIntegration(this);
     }
-    return myVehicles.size() == 0;
+}
+
+
+void
+MSLane::changeLanes(const SUMOTime t) {
+    myEdge->changeLanes(t);
 }
 
 
@@ -1810,9 +1817,8 @@ MSLane::appropriate(const MSVehicle* veh) {
 }
 
 
-bool
-MSLane::integrateNewVehicle(SUMOTime) {
-    bool wasInactive = myVehicles.size() == 0;
+void
+MSLane::integrateNewVehicles() {
     sort(myVehBuffer.begin(), myVehBuffer.end(), vehicle_position_sorter(this));
     for (std::vector<MSVehicle*>::const_iterator i = myVehBuffer.begin(); i != myVehBuffer.end(); ++i) {
         MSVehicle* veh = *i;
@@ -1831,9 +1837,8 @@ MSLane::integrateNewVehicle(SUMOTime) {
     sortPartialVehicles();
 #ifdef DEBUG_VEHICLE_CONTAINER
     if (DEBUG_COND) std::cout << SIMTIME << " integrateNewVehicle lane=" << getID()
-                                  << " vhicles=" << toString(myVehicles) << " partials=" << toString(myPartialVehicles) << "\n";
+                                  << " vehicles=" << toString(myVehicles) << " partials=" << toString(myPartialVehicles) << "\n";
 #endif
-    return wasInactive && myVehicles.size() != 0;
 }
 
 

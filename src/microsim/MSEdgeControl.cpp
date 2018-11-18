@@ -95,10 +95,10 @@ MSEdgeControl::planMovements(SUMOTime t) {
         while (myThreadPool.size() < MSGlobals::gNumSimThreads) {
             new FXWorkerThread(myThreadPool);
         }
-    }
-    std::priority_queue<std::pair<int, int> > rngLoad;
-    for (int i = 0; i < MSLane::getNumRNGs(); i++) {
-        rngLoad.emplace(0, i);
+        myRNGLoad = std::priority_queue<std::pair<int, int> >();
+        for (int i = 0; i < MSLane::getNumRNGs(); i++) {
+            myRNGLoad.emplace(0, i);
+        }
     }
 #endif
     for (std::list<MSLane*>::iterator i = myActiveLanes.begin(); i != myActiveLanes.end();) {
@@ -109,12 +109,12 @@ MSEdgeControl::planMovements(SUMOTime t) {
         } else {
 #ifdef HAVE_FOX
             if (MSGlobals::gNumSimThreads > 1) {
-                std::pair<int, int> minRNG = rngLoad.top();
+                std::pair<int, int> minRNG = myRNGLoad.top();
                 (*i)->setRNGIndex(minRNG.second);
                 myThreadPool.add((*i)->getPlanMoveTask(t), minRNG.second % myThreadPool.size());
-                rngLoad.pop();
+                myRNGLoad.pop();
                 minRNG.first -= vehNum;
-                rngLoad.push(minRNG);
+                myRNGLoad.push(minRNG);
                 ++i;
                 continue;
             }
@@ -130,32 +130,60 @@ MSEdgeControl::planMovements(SUMOTime t) {
 #endif
 }
 
+
 void
 MSEdgeControl::setJunctionApproaches(SUMOTime t) {
-    for (MSLane* lane : myActiveLanes) {
+    for (MSLane* const lane : myActiveLanes) {
         lane->setJunctionApproaches(t);
     }
 }
 
+
 void
 MSEdgeControl::executeMovements(SUMOTime t) {
     myWithVehicles2Integrate.clear();
+#ifdef HAVE_FOX
+    if (false) {
+//    if (MSGlobals::gNumSimThreads > 1) {
+        myRNGLoad = std::priority_queue<std::pair<int, int> >();
+        for (int i = 0; i < MSLane::getNumRNGs(); i++) {
+            myRNGLoad.emplace(0, i);
+        }
+        for (MSLane* const lane : myActiveLanes) {
+            std::pair<int, int> minRNG = myRNGLoad.top();
+            lane->setRNGIndex(minRNG.second);
+            myThreadPool.add(lane->getExecuteMoveTask(t), minRNG.second % myThreadPool.size());
+            myRNGLoad.pop();
+            minRNG.first -= lane->getVehicleNumber();
+            myRNGLoad.push(minRNG);
+        }
+        myThreadPool.waitAll(false);
+    } else {
+#endif
     for (std::list<MSLane*>::iterator i = myActiveLanes.begin(); i != myActiveLanes.end();) {
-        if ((*i)->getVehicleNumber() == 0 || (*i)->executeMovements(t, myWithVehicles2Integrate)) {
+        if ((*i)->getVehicleNumber() > 0) {
+            (*i)->executeMovements(t);
+        }
+        if ((*i)->getVehicleNumber() == 0) {
             myLanes[(*i)->getNumericalID()].amActive = false;
             i = myActiveLanes.erase(i);
         } else {
             ++i;
         }
     }
-    for (std::vector<MSLane*>::iterator i = myWithVehicles2Integrate.begin(); i != myWithVehicles2Integrate.end(); ++i) {
-        if ((*i)->integrateNewVehicle(t)) {
-            LaneUsage& lu = myLanes[(*i)->getNumericalID()];
+#ifdef HAVE_FOX
+}
+#endif
+    for (MSLane* const lane : myWithVehicles2Integrate) {
+        const bool wasInactive = lane->getVehicleNumber() == 0;
+        lane->integrateNewVehicles();
+        if (wasInactive && lane->getVehicleNumber() > 0) {
+            LaneUsage& lu = myLanes[lane->getNumericalID()];
             if (!lu.amActive) {
                 if (lu.haveNeighbors) {
-                    myActiveLanes.push_front(*i);
+                    myActiveLanes.push_front(lane);
                 } else {
-                    myActiveLanes.push_back(*i);
+                    myActiveLanes.push_back(lane);
                 }
                 lu.amActive = true;
             }
@@ -164,15 +192,15 @@ MSEdgeControl::executeMovements(SUMOTime t) {
     if (MSGlobals::gLateralResolution > 0) {
         // multiple vehicle shadows may have entered an inactive lane and would
         // not be sorted otherwise
-        for (LaneUsageVector::iterator it = myLanes.begin(); it != myLanes.end(); ++it) {
-            (*it).lane->sortPartialVehicles();
+        for (const LaneUsage& lu : myLanes) {
+            lu.lane->sortPartialVehicles();
         }
     }
 }
 
 
 void
-MSEdgeControl::changeLanes(SUMOTime t) {
+MSEdgeControl::changeLanes(const SUMOTime t) {
     std::vector<MSLane*> toAdd;
     MSGlobals::gComputeLC = true;
     for (std::list<MSLane*>::iterator i = myActiveLanes.begin(); i != myActiveLanes.end();) {

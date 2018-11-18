@@ -34,6 +34,7 @@
 #include <iostream>
 #include <list>
 #include <set>
+#include <queue>
 #include <utils/common/SUMOTime.h>
 #include <utils/common/Named.h>
 
@@ -125,9 +126,18 @@ public:
      *
      * @see MSLane::executeMovements
      * @see MSLane::integrateNewVehicle
-     * @todo When moving to parallel processing, the usage of myWithVehicles2Integrate would get insecure!!
      */
     void executeMovements(SUMOTime t);
+
+    void needsVehicleIntegration(MSLane* const l) {
+#ifdef HAVE_FOX
+        myThreadPool.lock();
+#endif
+        myWithVehicles2Integrate.push_back(l);
+#ifdef HAVE_FOX
+        myThreadPool.unlock();
+#endif
+    }
     /// @}
 
 
@@ -139,7 +149,7 @@ public:
      *
      * @see MSEdge::changeLanes
      */
-    void changeLanes(SUMOTime t);
+    void changeLanes(const SUMOTime t);
 
 
     /** @brief Detect collisions
@@ -232,6 +242,8 @@ private:
 
 #ifdef HAVE_FOX
     FXWorkerThread::Pool myThreadPool;
+
+    std::priority_queue<std::pair<int, int> > myRNGLoad;
 #endif
 
 private:

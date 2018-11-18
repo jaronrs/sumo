@@ -577,7 +577,7 @@ public:
      *
      * This method goes through all vehicles calling their * "setApproachingForAllLinks" method.
      */
-    virtual void setJunctionApproaches(const SUMOTime t);
+    virtual void setJunctionApproaches(const SUMOTime t) const;
 
     /** @brief This updates the MSLeaderInfo argument with respect to the given MSVehicle.
      *         All leader-vehicles on the same edge, which are relevant for the vehicle
@@ -599,10 +599,10 @@ public:
      *
      * @see MSVehicle::executeMove
      */
-    virtual bool executeMovements(SUMOTime t, std::vector<MSLane*>& lanesWithVehiclesToIntegrate);
+    virtual void executeMovements(const SUMOTime t);
 
     /// Insert buffered vehicle into the real lane.
-    virtual bool integrateNewVehicle(SUMOTime t);
+    virtual void integrateNewVehicles();
     ///@}
 
 
@@ -1104,6 +1104,18 @@ public:
 #ifdef HAVE_FOX
     FXWorkerThread::Task* getPlanMoveTask(const SUMOTime time) {
         mySimulationTask.init(&MSLane::planMovements, time);
+        return &mySimulationTask;
+    }
+
+    FXWorkerThread::Task* getExecuteMoveTask(const SUMOTime time) {
+        mySimulationTask.init(&MSLane::executeMovements, time);
+        return &mySimulationTask;
+    }
+
+    void changeLanes(const SUMOTime time);
+
+    FXWorkerThread::Task* getLaneChangeTask(const SUMOTime time) {
+        mySimulationTask.init(&MSLane::changeLanes, time);
         return &mySimulationTask;
     }
 #endif
