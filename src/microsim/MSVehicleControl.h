@@ -29,6 +29,9 @@
 #include <string>
 #include <map>
 #include <set>
+#ifdef HAVE_FOX
+#include <fx.h>
+#endif
 #include <utils/distribution/RandomDistributor.h>
 #include <utils/common/SUMOTime.h>
 #include <utils/common/SUMOVehicleClass.h>
@@ -610,6 +613,11 @@ private:
 
     /// @brief List of vehicles which belong to public transport
     std::vector<SUMOVehicle*> myPTVehicles;
+
+#ifdef HAVE_FOX
+    /// synchronize access to the different outputs and statistics (especially on vehicle removal)
+    FXMutex myOutputLock;
+#endif
 
 private:
     /// @brief invalidated copy constructor

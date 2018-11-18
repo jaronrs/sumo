@@ -37,6 +37,9 @@
 #include <utils/iodevices/OutputDevice.h>
 #include <utils/options/OptionsCont.h>
 #include <utils/vehicle/IntermodalRouter.h>
+#ifdef HAVE_FOX
+#include <utils/foxtools/FXConditionalLock.h>
+#endif
 
 
 // ===========================================================================
@@ -92,6 +95,7 @@ MSVehicleControl::~MSVehicleControl() {
     myVTypeDict.clear();
 }
 
+
 SUMOVehicle*
 MSVehicleControl::buildVehicle(SUMOVehicleParameter* defs,
                                const MSRoute* route, MSVehicleType* type,
@@ -106,6 +110,9 @@ MSVehicleControl::buildVehicle(SUMOVehicleParameter* defs,
 
 void
 MSVehicleControl::scheduleVehicleRemoval(SUMOVehicle* veh) {
+#ifdef HAVE_FOX
+    FXConditionalLock locker(myOutputLock, MSGlobals::gNumSimThreads > 1);
+#endif
     assert(myRunningVehNo > 0);
     myTotalTravelTime += STEPS2TIME(MSNet::getInstance()->getCurrentTimeStep() - veh->getDeparture());
     myRunningVehNo--;

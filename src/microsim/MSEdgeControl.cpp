@@ -143,8 +143,8 @@ void
 MSEdgeControl::executeMovements(SUMOTime t) {
     myWithVehicles2Integrate.clear();
 #ifdef HAVE_FOX
-    if (false) {
-//    if (MSGlobals::gNumSimThreads > 1) {
+//    if (false) {
+    if (MSGlobals::gNumSimThreads > 1) {
         myRNGLoad = std::priority_queue<std::pair<int, int> >();
         for (int i = 0; i < MSLane::getNumRNGs(); i++) {
             myRNGLoad.emplace(0, i);
