@@ -28,12 +28,13 @@
 #include <queue>
 #include <vector>
 #include "MSEdgeControl.h"
+#include "MSVehicleControl.h"
 #include "MSGlobals.h"
 #include "MSEdge.h"
 #include "MSLane.h"
 #include "MSVehicle.h"
 
-//#define PARALLEL_EXEC_MOVE
+#define PARALLEL_EXEC_MOVE
 //#define LOAD_BALANCING
 
 // ===========================================================================
@@ -175,7 +176,11 @@ MSEdgeControl::executeMovements(SUMOTime t) {
     }
 #endif
     for (std::list<MSLane*>::iterator i = myActiveLanes.begin(); i != myActiveLanes.end();) {
-        if (MSGlobals::gNumSimThreads > 1 && (*i)->getVehicleNumber() > 0) {
+        if (
+#ifdef PARALLEL_EXEC_MOVE
+        MSGlobals::gNumSimThreads <= 1 && 
+#endif
+        (*i)->getVehicleNumber() > 0) {
             (*i)->executeMovements(t);
         }
         if ((*i)->getVehicleNumber() == 0) {
@@ -185,6 +190,7 @@ MSEdgeControl::executeMovements(SUMOTime t) {
             ++i;
         }
     }
+    MSNet::getInstance()->getVehicleControl().removePending();
     for (MSLane* const lane : myWithVehicles2Integrate.getContainer()) {
         const bool wasInactive = lane->getVehicleNumber() == 0;
         lane->integrateNewVehicles();

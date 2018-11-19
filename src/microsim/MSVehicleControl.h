@@ -32,6 +32,7 @@
 #ifdef HAVE_FOX
 #include <fx.h>
 #endif
+#include <utils/foxtools/FXSynchQue.h>
 #include <utils/distribution/RandomDistributor.h>
 #include <utils/common/SUMOTime.h>
 #include <utils/common/SUMOVehicleClass.h>
@@ -155,6 +156,20 @@ public:
      * @param[in] veh The vehicle to remove
      */
     void scheduleVehicleRemoval(SUMOVehicle* veh);
+
+
+    /** @brief Removes a vehicle after it has ended
+     *
+     * Writes output to tripinfos and vehroutes if wished; decrements
+     *  the number of running vehicles and increments the number of ended
+     *  vehicles. Then deletes the vehicle using "deleteVehicle".
+     *
+     * This method should be called for each vehicle that was inserted
+     *  into the network and quits its ride.
+     *
+     * @param[in] veh The vehicle to remove
+     */
+    void removePending();
 
 
     /** @brief Returns the begin of the internal vehicle map
@@ -614,10 +629,8 @@ private:
     /// @brief List of vehicles which belong to public transport
     std::vector<SUMOVehicle*> myPTVehicles;
 
-#ifdef HAVE_FOX
-    /// synchronize access to the different outputs and statistics (especially on vehicle removal)
-    FXMutex myOutputLock;
-#endif
+    /// @brief List of vehicles which are going to be removed
+    FXSynchQue<SUMOVehicle*, std::vector<SUMOVehicle*> > myPendingRemovals;
 
 private:
     /// @brief invalidated copy constructor
