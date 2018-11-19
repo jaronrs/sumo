@@ -36,7 +36,7 @@ public:
     FXSynchQue (const bool condition=true): myCondition(condition) {}
 
     T top() {
-        assert(size() != 0);
+        assert(myItems.size() != 0);
 #ifdef HAVE_FOX
         if (myCondition) {
             myMutex.lock();
