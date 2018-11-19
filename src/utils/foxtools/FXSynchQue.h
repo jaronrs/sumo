@@ -7,15 +7,16 @@
 // http://www.eclipse.org/legal/epl-v20.html
 // SPDX-License-Identifier: EPL-2.0
 /****************************************************************************/
-/// @file    MFXEventQue.h
+/// @file    FXSynchQue.h
 /// @author  Daniel Krajzewicz
+/// @author  Michael Behrisch
 /// @date    2004-03-19
 /// @version $Id$
 ///
 // missing_desc
 /****************************************************************************/
-#ifndef MFXEventQue_h
-#define MFXEventQue_h
+#ifndef FXSynchQue_h
+#define FXSynchQue_h
 
 
 // ===========================================================================
@@ -27,54 +28,75 @@
 #include <list>
 #include <cassert>
 
-template<class T>
-class MFXEventQue {
+template<class T, class Container=std::list<T> >
+class FXSynchQue {
 public:
-    MFXEventQue() { }
-    ~MFXEventQue() { }
+    FXSynchQue (const bool condition=true): myCondition(condition) {}
 
     T top() {
         assert(size() != 0);
-        myMutex.lock();
+        if (myCondition) {
+            myMutex.lock();
+        }
         T ret = myItems.front();
-        myMutex.unlock();
+        if (myCondition) {
+            myMutex.unlock();
+        }
         return ret;
     }
 
-
     void pop() {
-        myMutex.lock();
+        if (myCondition) {
+            myMutex.lock();
+        }
         myItems.erase(myItems.begin());
-        myMutex.unlock();
+        if (myCondition) {
+            myMutex.unlock();
+        }
+    }
+
+    // Attention! Retains the lock
+    Container& getContainer() {
+        if (myCondition) {
+            myMutex.lock();
+        }
+        return myItems;
+    }
+
+    void unlock() {
+        if (myCondition) {
+            myMutex.unlock();
+        }
     }
 
     void add(T what) {
-        myMutex.lock();
+        if (myCondition) {
+            myMutex.lock();
+        }
         myItems.push_back(what);
-        myMutex.unlock();
-    }
-
-    int size() {
-        myMutex.lock();
-        const int ret = (int)myItems.size();
-        myMutex.unlock();
-        return ret;
+        if (myCondition) {
+            myMutex.unlock();
+        }
     }
 
     bool empty() {
-        myMutex.lock();
+        if (myCondition) {
+            myMutex.lock();
+        }
         const bool ret = myItems.size() == 0;
-        myMutex.unlock();
+        if (myCondition) {
+            myMutex.unlock();
+        }
         return ret;
     }
 
 private:
     FXMutex myMutex;
-    std::list<T> myItems;
+    Container myItems;
+    const bool myCondition;
 };
 
 
 #endif
 
 /****************************************************************************/
-

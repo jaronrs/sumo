@@ -11,10 +11,9 @@ FXLinkLabel.cpp FXLinkLabel.h \
 FXSevenSegment.cpp FXSevenSegment.h \
 FXSingleEventThread.cpp FXSingleEventThread.h \
 FXThreadEvent.cpp FXThreadEvent.h \
-FXWorkerThread.h \
+FXSynchQue.h FXWorkerThread.h \
 MsgHandlerSynchronized.h MsgHandlerSynchronized.cpp \
 MFXCheckableButton.cpp MFXCheckableButton.h \
-MFXEventQue.cpp MFXEventQue.h \
 MFXInterThreadEventClient.h \
 MFXAddEditTypedTable.cpp MFXAddEditTypedTable.h \
 MFXEditableTable.cpp MFXEditableTable.h \

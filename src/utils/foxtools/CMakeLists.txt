@@ -13,6 +13,7 @@ set(utils_foxtools_STAT_SRCS
    FXSevenSegment.h
    FXSingleEventThread.cpp
    FXSingleEventThread.h
+   FXSynchQue.h
    FXThreadEvent.cpp
    FXThreadEvent.h
    FXWorkerThread.h
@@ -20,8 +21,6 @@ set(utils_foxtools_STAT_SRCS
    MsgHandlerSynchronized.cpp
    MFXCheckableButton.cpp
    MFXCheckableButton.h
-   MFXEventQue.cpp
-   MFXEventQue.h
    MFXInterThreadEventClient.h
    MFXAddEditTypedTable.cpp
    MFXAddEditTypedTable.h

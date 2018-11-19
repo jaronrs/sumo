@@ -30,7 +30,7 @@
 #include <fx.h>
 #include <utils/foxtools/FXSingleEventThread.h>
 #include <utils/foxtools/FXThreadEvent.h>
-#include <utils/foxtools/MFXEventQue.h>
+#include <utils/foxtools/FXSynchQue.h>
 #include <utils/common/SUMOTime.h>
 
 
@@ -56,7 +56,7 @@ class GUIRunThread : public FXSingleEventThread {
 public:
     /// constructor
     GUIRunThread(FXApp* app, MFXInterThreadEventClient* mw,
-                 double& simDelay, MFXEventQue<GUIEvent*>& eq, FXEX::FXThreadEvent& ev);
+                 double& simDelay, FXSynchQue<GUIEvent*>& eq, FXEX::FXThreadEvent& ev);
 
     /// destructor
     virtual ~GUIRunThread();
@@ -158,7 +158,7 @@ protected:
 
     double& mySimDelay;
 
-    MFXEventQue<GUIEvent*>& myEventQue;
+    FXSynchQue<GUIEvent*>& myEventQue;
 
     FXEX::FXThreadEvent& myEventThrow;
 
