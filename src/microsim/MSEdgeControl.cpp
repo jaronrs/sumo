@@ -33,6 +33,8 @@
 #include "MSLane.h"
 #include "MSVehicle.h"
 
+//#define PARALLEL_EXEC_MOVE
+//#define LOAD_BALANCING
 
 // ===========================================================================
 // member method definitions
@@ -98,24 +100,28 @@ MSEdgeControl::planMovements(SUMOTime t) {
         }
     }
 #endif
+#ifdef LOAD_BALANCING
     myRNGLoad = std::priority_queue<std::pair<int, int> >();
     for (int i = 0; i < MSLane::getNumRNGs(); i++) {
         myRNGLoad.emplace(0, i);
     }
+#endif
     for (std::list<MSLane*>::iterator i = myActiveLanes.begin(); i != myActiveLanes.end();) {
         const int vehNum = (*i)->getVehicleNumber();
         if (vehNum == 0) {
             myLanes[(*i)->getNumericalID()].amActive = false;
             i = myActiveLanes.erase(i);
         } else {
+#ifdef LOAD_BALANCING
             std::pair<int, int> minRNG = myRNGLoad.top();
             (*i)->setRNGIndex(minRNG.second);
             myRNGLoad.pop();
             minRNG.first -= vehNum;
             myRNGLoad.push(minRNG);
+#endif
 #ifdef HAVE_FOX
             if (MSGlobals::gNumSimThreads > 1) {
-                myThreadPool.add((*i)->getPlanMoveTask(t), minRNG.second % myThreadPool.size());
+                myThreadPool.add((*i)->getPlanMoveTask(t), (*i)->getRNGIndex() % myThreadPool.size());
                 ++i;
                 continue;
             }
@@ -144,25 +150,32 @@ void
 MSEdgeControl::executeMovements(SUMOTime t) {
     myWithVehicles2Integrate.clear();
 #ifdef HAVE_FOX
-//    if (false) {
+#ifdef PARALLEL_EXEC_MOVE
     if (MSGlobals::gNumSimThreads > 1) {
+#else
+    if (false) {
+#endif
+#ifdef LOAD_BALANCING
         myRNGLoad = std::priority_queue<std::pair<int, int> >();
         for (int i = 0; i < MSLane::getNumRNGs(); i++) {
             myRNGLoad.emplace(0, i);
         }
+#endif
         for (MSLane* const lane : myActiveLanes) {
+#ifdef LOAD_BALANCING
             std::pair<int, int> minRNG = myRNGLoad.top();
             lane->setRNGIndex(minRNG.second);
-            myThreadPool.add(lane->getExecuteMoveTask(t), minRNG.second % myThreadPool.size());
             myRNGLoad.pop();
             minRNG.first -= lane->getVehicleNumber();
             myRNGLoad.push(minRNG);
+#endif
+            myThreadPool.add(lane->getExecuteMoveTask(t), lane->getRNGIndex() % myThreadPool.size());
         }
         myThreadPool.waitAll(false);
-    } else {
+    }
 #endif
     for (std::list<MSLane*>::iterator i = myActiveLanes.begin(); i != myActiveLanes.end();) {
-        if ((*i)->getVehicleNumber() > 0) {
+        if (MSGlobals::gNumSimThreads > 1 && (*i)->getVehicleNumber() > 0) {
             (*i)->executeMovements(t);
         }
         if ((*i)->getVehicleNumber() == 0) {
@@ -172,9 +185,6 @@ MSEdgeControl::executeMovements(SUMOTime t) {
             ++i;
         }
     }
-#ifdef HAVE_FOX
-}
-#endif
     for (MSLane* const lane : myWithVehicles2Integrate.getContainer()) {
         const bool wasInactive = lane->getVehicleNumber() == 0;
         lane->integrateNewVehicles();

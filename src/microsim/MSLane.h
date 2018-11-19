@@ -214,6 +214,11 @@ public:
         myRNGIndex = rngIndex;
     }
 
+    /// @brief returns the associated RNG index
+    int getRNGIndex() const {
+        return myRNGIndex;
+    }
+
     /// @brief return the associated RNG
     std::mt19937* getRNG() const {
         return &myRNGs[myRNGIndex];
