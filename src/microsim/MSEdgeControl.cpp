@@ -40,6 +40,7 @@
 MSEdgeControl::MSEdgeControl(const std::vector< MSEdge* >& edges)
     : myEdges(edges),
       myLanes(MSLane::dictSize()),
+      myWithVehicles2Integrate(MSGlobals::gNumSimThreads > 1),
       myLastLaneChange(MSEdge::dictSize()) {
     // build the usage definitions for lanes
     for (std::vector< MSEdge* >::const_iterator i = myEdges.begin(); i != myEdges.end(); ++i) {
@@ -174,7 +175,7 @@ MSEdgeControl::executeMovements(SUMOTime t) {
 #ifdef HAVE_FOX
 }
 #endif
-    for (MSLane* const lane : myWithVehicles2Integrate) {
+    for (MSLane* const lane : myWithVehicles2Integrate.getContainer()) {
         const bool wasInactive = lane->getVehicleNumber() == 0;
         lane->integrateNewVehicles();
         if (wasInactive && lane->getVehicleNumber() > 0) {
@@ -189,6 +190,7 @@ MSEdgeControl::executeMovements(SUMOTime t) {
             }
         }
     }
+    myWithVehicles2Integrate.unlock();
     if (MSGlobals::gLateralResolution > 0) {
         // multiple vehicle shadows may have entered an inactive lane and would
         // not be sorted otherwise

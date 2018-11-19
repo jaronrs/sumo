@@ -1769,7 +1769,7 @@ GUIApplicationWindow::onKeyRelease(FXObject* o, FXSelector sel, void* data) {
 void
 GUIApplicationWindow::sendBlockingEvent(GUIEvent* event) {
     myEventMutex.lock();
-    myEvents.add(event);
+    myEvents.push_back(event);
     myRunThreadEvent.signal();
     myEventCondition.wait(myEventMutex);
     myEventMutex.unlock();

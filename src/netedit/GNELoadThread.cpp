@@ -200,7 +200,7 @@ GNELoadThread::submitEndAndCleanup(GNENet* net, const std::string& guiSettingsFi
     MsgHandler::getMessageInstance()->removeRetriever(myMessageRetriever);
     // inform parent about the process
     GUIEvent* e = new GNEEvent_NetworkLoaded(net, myFile, guiSettingsFile, viewportFromRegistry);
-    myEventQue.add(e);
+    myEventQue.push_back(e);
     myEventThrow.signal();
 }
 
@@ -340,7 +340,7 @@ GNELoadThread::loadConfigOrNet(const std::string& file, bool isNet, bool useStar
 void
 GNELoadThread::retrieveMessage(const MsgHandler::MsgType type, const std::string& msg) {
     GUIEvent* e = new GUIEvent_Message(type, msg);
-    myEventQue.add(e);
+    myEventQue.push_back(e);
     myEventThrow.signal();
 }
 

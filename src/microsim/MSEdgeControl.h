@@ -38,6 +38,7 @@
 #include <utils/common/SUMOTime.h>
 #include <utils/common/Named.h>
 
+#include <utils/foxtools/FXSynchQue.h>
 #ifdef HAVE_FOX
 #include <utils/foxtools/FXWorkerThread.h>
 #endif
@@ -232,7 +233,7 @@ private:
     std::list<MSLane*> myActiveLanes;
 
     /// @brief A storage for lanes which shall be integrated because vehicles have moved onto them
-    std::vector<MSLane*> myWithVehicles2Integrate;
+    FXSynchQue<MSLane*, std::vector<MSLane*> > myWithVehicles2Integrate;
 
     /// @brief Lanes which changed the state without informing the control
     std::set<MSLane*, ComparatorIdLess> myChangedStateLanes;

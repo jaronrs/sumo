@@ -24,7 +24,9 @@
 // ===========================================================================
 #include <config.h>
 
+#ifdef HAVE_FOX
 #include <fx.h>
+#endif
 #include <list>
 #include <cassert>
 
@@ -35,63 +37,99 @@ public:
 
     T top() {
         assert(size() != 0);
+#ifdef HAVE_FOX
         if (myCondition) {
             myMutex.lock();
         }
+#endif
         T ret = myItems.front();
+#ifdef HAVE_FOX
         if (myCondition) {
             myMutex.unlock();
         }
+#endif
         return ret;
     }
 
     void pop() {
+#ifdef HAVE_FOX
         if (myCondition) {
             myMutex.lock();
         }
+#endif
         myItems.erase(myItems.begin());
+#ifdef HAVE_FOX
         if (myCondition) {
             myMutex.unlock();
         }
+#endif
     }
 
     // Attention! Retains the lock
     Container& getContainer() {
+#ifdef HAVE_FOX
         if (myCondition) {
             myMutex.lock();
         }
+#endif
         return myItems;
     }
 
     void unlock() {
+#ifdef HAVE_FOX
         if (myCondition) {
             myMutex.unlock();
         }
+#endif
     }
 
-    void add(T what) {
+    void push_back(T what) {
+#ifdef HAVE_FOX
         if (myCondition) {
             myMutex.lock();
         }
+#endif
         myItems.push_back(what);
+#ifdef HAVE_FOX
         if (myCondition) {
             myMutex.unlock();
         }
+#endif
     }
 
     bool empty() {
+#ifdef HAVE_FOX
         if (myCondition) {
             myMutex.lock();
         }
+#endif
         const bool ret = myItems.size() == 0;
+#ifdef HAVE_FOX
         if (myCondition) {
             myMutex.unlock();
         }
+#endif
         return ret;
     }
 
+    void clear() {
+#ifdef HAVE_FOX
+        if (myCondition) {
+            myMutex.lock();
+        }
+#endif
+        myItems.clear();
+#ifdef HAVE_FOX
+        if (myCondition) {
+            myMutex.unlock();
+        }
+#endif
+    }
+
 private:
+#ifdef HAVE_FOX
     FXMutex myMutex;
+#endif
     Container myItems;
     const bool myCondition;
 };

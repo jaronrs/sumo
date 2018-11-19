@@ -112,7 +112,7 @@ GUILoadThread::run() {
                 myFile = oc.getString("net-file");
                 myLoadNet = true;
             }
-            myEventQue.add(new GUIEvent_Message("Loading '" + myFile + "'."));
+            myEventQue.push_back(new GUIEvent_Message("Loading '" + myFile + "'."));
             myEventThrow.signal();
             myParent->addRecentFile(FXPath::absolute(myFile.c_str()), myLoadNet);
         }
@@ -234,7 +234,7 @@ GUILoadThread::submitEndAndCleanup(GUINet* net,
     MsgHandler::getMessageInstance()->removeRetriever(myMessageRetriever);
     // inform parent about the process
     GUIEvent* e = new GUIEvent_SimulationLoaded(net, simStartTime, simEndTime, myTitle, guiSettingsFiles, osgView);
-    myEventQue.add(e);
+    myEventQue.push_back(e);
     myEventThrow.signal();
 }
 
@@ -253,7 +253,7 @@ GUILoadThread::loadConfigOrNet(const std::string& file, bool isNet) {
 void
 GUILoadThread::retrieveMessage(const MsgHandler::MsgType type, const std::string& msg) {
     GUIEvent* e = new GUIEvent_Message(type, msg);
-    myEventQue.add(e);
+    myEventQue.push_back(e);
     myEventThrow.signal();
 }
 
