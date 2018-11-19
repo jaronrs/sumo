@@ -147,10 +147,10 @@ GUILane::setJunctionApproaches(const SUMOTime t) {
 }
 
 
-bool
-GUILane::executeMovements(SUMOTime t, std::vector<MSLane*>& into) {
+void
+GUILane::executeMovements(const SUMOTime t) {
     FXMutexLock locker(myLock);
-    return MSLane::executeMovements(t, into);
+    MSLane::executeMovements(t);
 }
 
 
@@ -175,10 +175,10 @@ GUILane::swapAfterLaneChange(SUMOTime t) {
 }
 
 
-bool
-GUILane::integrateNewVehicle(SUMOTime t) {
+void
+GUILane::integrateNewVehicles() {
     FXMutexLock locker(myLock);
-    return MSLane::integrateNewVehicle(t);
+    MSLane::integrateNewVehicles();
 }
 
 
