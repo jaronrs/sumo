@@ -1640,20 +1640,20 @@ MSLane::executeMovements(const SUMOTime t) {
             // this should never happen because it is handled in MSVehicle::executeMove
             assert(false);
             WRITE_WARNING("Teleporting vehicle '" + veh->getID() + "'; beyond end of lane, target lane='" + getID() + "', time=" +
-                          time2string(MSNet::getInstance()->getCurrentTimeStep()) + ".");
+                          time2string(t) + ".");
             MSNet::getInstance()->getVehicleControl().registerCollision();
             MSVehicleTransfer::getInstance()->add(t, veh);
         } else if (veh->collisionStopTime() == 0) {
             veh->resumeFromStopping();
             if (getCollisionAction() == COLLISION_ACTION_REMOVE) {
                 WRITE_WARNING("Removing vehicle '" + veh->getID() + "' after earlier collision, lane='" + veh->getLane()->getID() + ", time=" +
-                              time2string(MSNet::getInstance()->getCurrentTimeStep()) + ".");
+                              time2string(t) + ".");
                 veh->onRemovalFromNet(MSMoveReminder::NOTIFICATION_VAPORIZED);
                 MSNet::getInstance()->getVehicleControl().scheduleVehicleRemoval(veh);
             } else if (getCollisionAction() == COLLISION_ACTION_TELEPORT) {
                 WRITE_WARNING("Teleporting vehicle '" + veh->getID() + "' after earlier collision, lane='" + veh->getLane()->getID() + ", time=" +
-                              time2string(MSNet::getInstance()->getCurrentTimeStep()) + ".");
-                MSVehicleTransfer::getInstance()->add(MSNet::getInstance()->getCurrentTimeStep(), veh);
+                              time2string(t) + ".");
+                MSVehicleTransfer::getInstance()->add(t, veh);
             } else {
                 ++i;
                 continue;

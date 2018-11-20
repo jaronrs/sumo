@@ -41,7 +41,7 @@
 // ===========================================================================
 MSVehicleTransfer* MSVehicleTransfer::myInstance = nullptr;
 const double MSVehicleTransfer::TeleportMinSpeed = 1;
-const std::set<const MSVehicle*> MSVehicleTransfer::myEmptyVehicleSet;
+
 
 // ===========================================================================
 // member method definitions
@@ -72,23 +72,26 @@ MSVehicleTransfer::add(const SUMOTime t, MSVehicle* veh) {
 
 void
 MSVehicleTransfer::remove(MSVehicle* veh) {
-    for (VehicleInfVector::iterator i = myVehicles.begin(); i != myVehicles.end(); ++i) {
+    auto& vehInfos = myVehicles.getContainer();
+    for (auto i = vehInfos.begin(); i != vehInfos.end(); ++i) {
         if (i->myVeh == veh) {
             if (i->myParking) {
                 veh->getLane()->removeParking(veh);
             }
-            myVehicles.erase(i);
+            vehInfos.erase(i);
             break;
         }
     }
+    myVehicles.unlock();
 }
 
 
 void
 MSVehicleTransfer::checkInsertions(SUMOTime time) {
     // go through vehicles
-    for (VehicleInfVector::iterator i = myVehicles.begin(); i != myVehicles.end();) {
-        // get the vehicle information
+    auto& vehInfos = myVehicles.getContainer();
+    for (auto i = vehInfos.begin(); i != vehInfos.end();) {
+        // vehicle information cannot be const because we need to assign the proceed time
         VehicleInformation& desc = *i;
 
         if (desc.myParking) {
@@ -115,7 +118,7 @@ MSVehicleTransfer::checkInsertions(SUMOTime time) {
                     false, MSMoveReminder::NOTIFICATION_PARKING)) {
                 MSNet::getInstance()->informVehicleStateListener(desc.myVeh, MSNet::VEHICLE_STATE_ENDING_PARKING);
                 desc.myVeh->getLane()->removeParking(desc.myVeh);
-                i = myVehicles.erase(i);
+                i = vehInfos.erase(i);
             } else {
                 i++;
             }
@@ -127,17 +130,17 @@ MSVehicleTransfer::checkInsertions(SUMOTime time) {
                          e->getFreeLane(nullptr, vclass, departPos));
             // handle teleporting vehicles, lane may be 0 because permissions were modified by a closing rerouter or TraCI
             if (l != nullptr && l->freeInsertion(*(desc.myVeh), MIN2(l->getSpeedLimit(), desc.myVeh->getMaxSpeed()), 0, MSMoveReminder::NOTIFICATION_TELEPORT)) {
-                WRITE_WARNING("Vehicle '" + desc.myVeh->getID() + "' ends teleporting on edge '" + e->getID() + "', time " + time2string(MSNet::getInstance()->getCurrentTimeStep()) + ".");
+                WRITE_WARNING("Vehicle '" + desc.myVeh->getID() + "' ends teleporting on edge '" + e->getID() + "', time " + time2string(time) + ".");
                 MSNet::getInstance()->informVehicleStateListener(desc.myVeh, MSNet::VEHICLE_STATE_ENDING_TELEPORT);
-                i = myVehicles.erase(i);
+                i = vehInfos.erase(i);
             } else {
                 // could not insert. maybe we should proceed in virtual space
                 if (desc.myProceedTime < time) {
                     if (desc.myVeh->succEdge(1) == nullptr) {
-                        WRITE_WARNING("Vehicle '" + desc.myVeh->getID() + "' teleports beyond arrival edge '" + e->getID() + "', time " + time2string(MSNet::getInstance()->getCurrentTimeStep()) + ".");
+                        WRITE_WARNING("Vehicle '" + desc.myVeh->getID() + "' teleports beyond arrival edge '" + e->getID() + "', time " + time2string(time) + ".");
                         desc.myVeh->leaveLane(MSMoveReminder::NOTIFICATION_TELEPORT_ARRIVED);
                         MSNet::getInstance()->getVehicleControl().scheduleVehicleRemoval(desc.myVeh);
-                        i = myVehicles.erase(i);
+                        i = vehInfos.erase(i);
                         continue;
                     }
                     // let the vehicle move to the next edge
@@ -151,12 +154,7 @@ MSVehicleTransfer::checkInsertions(SUMOTime time) {
             }
         }
     }
-}
-
-
-bool
-MSVehicleTransfer::hasPending() const {
-    return !myVehicles.empty();
+    myVehicles.unlock();
 }
 
 
@@ -169,7 +167,7 @@ MSVehicleTransfer::getInstance() {
 }
 
 
-MSVehicleTransfer::MSVehicleTransfer() {}
+MSVehicleTransfer::MSVehicleTransfer() : myVehicles(MSGlobals::gNumSimThreads > 1) {}
 
 
 MSVehicleTransfer::~MSVehicleTransfer() {
@@ -178,16 +176,17 @@ MSVehicleTransfer::~MSVehicleTransfer() {
 
 
 void
-MSVehicleTransfer::saveState(OutputDevice& out) const {
-    for (VehicleInfVector::const_iterator it = myVehicles.begin(); it != myVehicles.end(); ++it) {
+MSVehicleTransfer::saveState(OutputDevice& out) {
+    for (const VehicleInformation& vehInfo: myVehicles.getContainer()) {
         out.openTag(SUMO_TAG_VEHICLETRANSFER);
-        out.writeAttr(SUMO_ATTR_ID, it->myVeh->getID());
-        out.writeAttr(SUMO_ATTR_DEPART, it->myProceedTime);
-        if (it->myParking) {
-            out.writeAttr(SUMO_ATTR_PARKING, it->myVeh->getLane()->getID());
+        out.writeAttr(SUMO_ATTR_ID, vehInfo.myVeh->getID());
+        out.writeAttr(SUMO_ATTR_DEPART, vehInfo.myProceedTime);
+        if (vehInfo.myParking) {
+            out.writeAttr(SUMO_ATTR_PARKING, vehInfo.myVeh->getLane()->getID());
         }
         out.closeTag();
     }
+    myVehicles.unlock();
 }
 
 
@@ -210,6 +209,4 @@ MSVehicleTransfer::loadState(const SUMOSAXAttributes& attrs, const SUMOTime offs
 }
 
 
-
 /****************************************************************************/
-
