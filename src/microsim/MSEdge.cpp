@@ -152,13 +152,12 @@ void MSEdge::recalcCache() {
 void
 MSEdge::closeBuilding() {
     myAllowed[nullptr] = new std::vector<MSLane*>();
-    for (std::vector<MSLane*>::const_iterator i = myLanes->begin(); i != myLanes->end(); ++i) {
-        myAllowed[nullptr]->push_back(*i);
-        const MSLinkCont& lc = (*i)->getLinkCont();
-        for (MSLinkCont::const_iterator j = lc.begin(); j != lc.end(); ++j) {
-            (*j)->initParallelLinks();
-            MSLane* const toL = (*j)->getLane();
-            MSLane* const viaL = (*j)->getViaLane();
+    for (MSLane* const lane : *myLanes) {
+        myAllowed[nullptr]->push_back(lane);
+        for (MSLink* const link : lane->getLinkCont()) {
+            link->initParallelLinks();
+            MSLane* const toL = link->getLane();
+            MSLane* const viaL = link->getViaLane();
             if (toL != nullptr) {
                 MSEdge& to = toL->getEdge();
                 //
@@ -173,8 +172,8 @@ MSEdge::closeBuilding() {
                 if (myAllowed.find(&to) == myAllowed.end()) {
                     myAllowed[&to] = new std::vector<MSLane*>();
                 }
-                myAllowed[&to]->push_back(*i);
-                if ((*j)->getDirection() != LINKDIR_TURN) {
+                myAllowed[&to]->push_back(lane);
+                if (link->getDirection() != LINKDIR_TURN) {
                     myAmFringe = false;
                 }
             }
@@ -185,6 +184,7 @@ MSEdge::closeBuilding() {
                 }
             }
         }
+        lane->checkBufferType();
     }
     std::sort(mySuccessors.begin(), mySuccessors.end(), by_id_sorter());
     rebuildAllowedLanes();

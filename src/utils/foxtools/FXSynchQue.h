@@ -65,6 +65,11 @@ public:
 #endif
     }
 
+    // Attention! Removes locking behavior
+    void unsetCondition() {
+        myCondition = false;
+    }
+
     // Attention! Retains the lock
     Container& getContainer() {
 #ifdef HAVE_FOX
@@ -131,7 +136,7 @@ private:
     FXMutex myMutex;
 #endif
     Container myItems;
-    const bool myCondition;
+    bool myCondition;
 };
 
 

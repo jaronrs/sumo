@@ -131,13 +131,7 @@ public:
     void executeMovements(SUMOTime t);
 
     void needsVehicleIntegration(MSLane* const l) {
-#ifdef HAVE_FOX
-        myThreadPool.lock();
-#endif
         myWithVehicles2Integrate.push_back(l);
-#ifdef HAVE_FOX
-        myThreadPool.unlock();
-#endif
     }
     /// @}
 

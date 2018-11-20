@@ -221,6 +221,14 @@ MSLane::initRestrictions() {
 
 
 void
+MSLane::checkBufferType() {
+    if (MSGlobals::gNumSimThreads <= 1 || myIncomingLanes.size() <= 1) {
+        myVehBuffer.unsetCondition();
+    }
+}
+
+
+void
 MSLane::addLink(MSLink* link) {
     myLinks.push_back(link);
 }
@@ -1819,9 +1827,9 @@ MSLane::appropriate(const MSVehicle* veh) {
 
 void
 MSLane::integrateNewVehicles() {
-    sort(myVehBuffer.begin(), myVehBuffer.end(), vehicle_position_sorter(this));
-    for (std::vector<MSVehicle*>::const_iterator i = myVehBuffer.begin(); i != myVehBuffer.end(); ++i) {
-        MSVehicle* veh = *i;
+    std::vector<MSVehicle*>& buffered = myVehBuffer.getContainer();
+    sort(buffered.begin(), buffered.end(), vehicle_position_sorter(this));
+    for (MSVehicle* const veh : buffered) {
         assert(veh->getLane() == this);
         myVehicles.insert(myVehicles.begin(), veh);
         myBruttoVehicleLengthSum += veh->getVehicleType().getLengthWithGap();
@@ -1829,7 +1837,8 @@ MSLane::integrateNewVehicles() {
         //if (true) std::cout << SIMTIME << " integrateNewVehicle lane=" << getID() << " veh=" << veh->getID() << " (on lane " << veh->getLane()->getID() << ") into lane=" << getID() << " myBrutto=" << myBruttoVehicleLengthSum << "\n";
         myEdge->markDelayed();
     }
-    myVehBuffer.clear();
+    buffered.clear();
+    myVehBuffer.unlock();
     //std::cout << SIMTIME << " integrateNewVehicle lane=" << getID() << " myVehicles1=" << toString(myVehicles);
     if (MSGlobals::gLateralResolution > 0 || myNeighs.size() > 0) {
         sort(myVehicles.begin(), myVehicles.end(), vehicle_natural_position_sorter(this));

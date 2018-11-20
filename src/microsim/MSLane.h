@@ -46,6 +46,7 @@
 #include "MSMoveReminder.h"
 #include <libsumo/Helper.h>
 
+#include <utils/foxtools/FXSynchQue.h>
 #ifdef HAVE_FOX
 #include <utils/foxtools/FXWorkerThread.h>
 #endif
@@ -84,8 +85,6 @@ public:
     /// needs access to myTmpVehicles (this maybe should be done via double-buffering!!!)
     friend class MSLaneChanger;
     friend class MSLaneChangerSublane;
-
-    friend class MSXMLRawOut;
 
     friend class MSQueueExport;
     friend class AnyVehicleIterator;
@@ -226,7 +225,7 @@ public:
 
     /// @brief return the number of RNGs
     static int getNumRNGs() {
-        return myRNGs.size();
+        return (int)myRNGs.size();
     }
 
     /// @name Additional initialisation
@@ -1041,6 +1040,8 @@ public:
     /// @brief initialized vClass-specific speed limits
     void initRestrictions();
 
+    void checkBufferType();
+
     double getRightSideOnEdge() const {
         return myRightSideOnEdge;
     }
@@ -1273,7 +1274,7 @@ protected:
 
     /** @brief Buffer for vehicles that moved from their previous lane onto this one.
      * Integrated after all vehicles executed their moves*/
-    VehCont myVehBuffer;
+    FXSynchQue<MSVehicle*, std::vector<MSVehicle*> > myVehBuffer;
 
     /** @brief The vehicles which registered maneuvering into the lane within their current action step.
      *         This is currently only relevant for sublane simulation, since continuous lanechanging
