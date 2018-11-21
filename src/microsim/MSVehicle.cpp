@@ -4626,6 +4626,9 @@ MSVehicle::updateOccupancyAndCurrentBestLane(const MSLane* startLane) {
             nextOccupation += (*j)->getBruttoVehLenSum();
         }
         (*i).nextOccupation = nextOccupation;
+#ifdef DEBUG_BESTLANES
+        if (DEBUG_COND) std::cout << "     lane=" << (*i).lane->getID() << " nextOccupation=" << nextOccupation << "\n";
+#endif
         if ((*i).lane == startLane) {
             myCurrentLaneInBestLanes = i;
         }
