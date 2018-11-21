@@ -70,9 +70,7 @@ MSVehicleTransfer::add(const SUMOTime t, MSVehicle* veh) {
         veh->onRemovalFromNet(MSMoveReminder::NOTIFICATION_TELEPORT);
         veh->enterLaneAtMove(veh->succEdge(1)->getLanes()[0], true);
     }
-    myVehicles.push_back(VehicleInformation(t, veh,
-                                            t + TIME2STEPS(veh->getEdge()->getCurrentTravelTime(TeleportMinSpeed)),
-                                            veh->isParking()));
+    myVehicles.push_back(VehicleInformation(t, veh, -1, veh->isParking()));
 }
 
 
@@ -142,7 +140,10 @@ MSVehicleTransfer::checkInsertions(SUMOTime time) {
                 i = vehInfos.erase(i);
             } else {
                 // could not insert. maybe we should proceed in virtual space
-                if (desc.myProceedTime < time) {
+                if (desc.myProceedTime < 0) {
+                    // initialize proceed time (delayed to avoid lane-order dependency in executeMove)
+                    desc.myProceedTime = time + TIME2STEPS(e->getCurrentTravelTime(TeleportMinSpeed));
+                } else if (desc.myProceedTime < time) {
                     if (desc.myVeh->succEdge(1) == nullptr) {
                         WRITE_WARNING("Vehicle '" + desc.myVeh->getID() + "' teleports beyond arrival edge '" + e->getID() + "', time " + time2string(time) + ".");
                         desc.myVeh->leaveLane(MSMoveReminder::NOTIFICATION_TELEPORT_ARRIVED);
