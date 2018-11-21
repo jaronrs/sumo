@@ -131,9 +131,24 @@ public:
 #endif
     }
 
+    size_t size() const {
+#ifdef HAVE_FOX
+        if (myCondition) {
+            myMutex.lock();
+        }
+#endif
+        size_t res = myItems.size();
+#ifdef HAVE_FOX
+        if (myCondition) {
+            myMutex.unlock();
+        }
+#endif
+        return res;
+    }
+
 private:
 #ifdef HAVE_FOX
-    FXMutex myMutex;
+    mutable FXMutex myMutex;
 #endif
     Container myItems;
     bool myCondition;
