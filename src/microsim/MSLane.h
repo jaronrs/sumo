@@ -1535,7 +1535,11 @@ private:
             myTime = time;
         }
         void run(FXWorkerThread* /*context*/) {
-            (myLane.*(myOperation))(myTime);
+            try {
+                (myLane.*(myOperation))(myTime);
+            } catch (ProcessError& e) {
+                WRITE_ERROR(e.what());
+            }
         }
     private:
         Operation myOperation;
