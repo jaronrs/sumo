@@ -607,6 +607,9 @@ public:
 
     /// Insert buffered vehicle into the real lane.
     virtual void integrateNewVehicles();
+
+    /// @brief updated current vehicle length sum (delayed to avoid lane-order-dependency)
+    void updateLengthSum();
     ///@}
 
 
@@ -1332,6 +1335,12 @@ protected:
 
     /// @brief The current length of all vehicles on this lane, excluding their minGaps
     double myNettoVehicleLengthSum;
+
+    /// @brief The length of all vehicles that have left this lane in the current step (this lane, including their minGaps)
+    double myBruttoVehicleLengthSumToRemove;
+
+    /// @brief The length of all vehicles that have left this lane in the current step (this lane, excluding their minGaps)
+    double myNettoVehicleLengthSumToRemove;
 
     /** The lane's Links to it's succeeding lanes and the default
         right-of-way rule, i.e. blocked or not blocked. */

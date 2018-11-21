@@ -149,6 +149,7 @@ MSEdgeControl::setJunctionApproaches(SUMOTime t) {
 
 void
 MSEdgeControl::executeMovements(SUMOTime t) {
+    std::vector<MSLane*> wasActive(myActiveLanes.begin(), myActiveLanes.end());
     myWithVehicles2Integrate.clear();
 #ifdef HAVE_FOX
 #ifdef PARALLEL_EXEC_MOVE
@@ -189,6 +190,9 @@ MSEdgeControl::executeMovements(SUMOTime t) {
         } else {
             ++i;
         }
+    }
+    for (MSLane* lane : wasActive) {
+        lane->updateLengthSum();
     }
     MSNet::getInstance()->getVehicleControl().removePending();
     for (MSLane* const lane : myWithVehicles2Integrate.getContainer()) {

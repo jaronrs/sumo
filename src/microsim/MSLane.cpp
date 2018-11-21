@@ -185,6 +185,7 @@ MSLane::MSLane(const std::string& id, double maxSpeed, double length, MSEdge* co
     myCanonicalPredecessorLane(nullptr),
     myCanonicalSuccessorLane(nullptr),
     myBruttoVehicleLengthSum(0), myNettoVehicleLengthSum(0),
+    myBruttoVehicleLengthSumToRemove(0), myNettoVehicleLengthSumToRemove(0),
     myLeaderInfo(this, nullptr, 0),
     myFollowerInfo(this, nullptr, 0),
     myLeaderInfoTime(SUMOTime_MIN),
@@ -1670,8 +1671,8 @@ MSLane::executeMovements(const SUMOTime t) {
             ++i;
             continue;
         }
-        myBruttoVehicleLengthSum -= length;
-        myNettoVehicleLengthSum -= nettoLength;
+        myBruttoVehicleLengthSumToRemove += length;
+        myNettoVehicleLengthSumToRemove += nettoLength;
         ++i;
         i = VehCont::reverse_iterator(myVehicles.erase(i.base()));
     }
@@ -1687,8 +1688,8 @@ MSLane::executeMovements(const SUMOTime t) {
                     const bool minorLink = !wrongLane && (link != myLinks.end()) && !((*link)->havePriority());
                     const std::string reason = (wrongLane ? " (wrong lane)" : (minorLink ? " (yield)" : " (jam)"));
                     MSVehicle* veh = *(myVehicles.end() - 1);
-                    myBruttoVehicleLengthSum -= veh->getVehicleType().getLengthWithGap();
-                    myNettoVehicleLengthSum -= veh->getVehicleType().getLength();
+                    myBruttoVehicleLengthSumToRemove += veh->getVehicleType().getLengthWithGap();
+                    myNettoVehicleLengthSumToRemove += veh->getVehicleType().getLength();
                     myVehicles.erase(myVehicles.end() - 1);
                     WRITE_WARNING("Teleporting vehicle '" + veh->getID() + "'; waited too long"
                                   + reason
@@ -1714,6 +1715,15 @@ MSLane::executeMovements(const SUMOTime t) {
         // trigger sorting of vehicles as their order may have changed
         MSNet::getInstance()->getEdgeControl().needsVehicleIntegration(this);
     }
+}
+
+
+void 
+MSLane::updateLengthSum() {
+    myBruttoVehicleLengthSum -= myBruttoVehicleLengthSumToRemove;
+    myNettoVehicleLengthSum -= myNettoVehicleLengthSumToRemove;
+    myBruttoVehicleLengthSumToRemove = 0;
+    myNettoVehicleLengthSumToRemove = 0;
 }
 
 
