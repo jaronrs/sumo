@@ -195,7 +195,10 @@ MSEdgeControl::executeMovements(SUMOTime t) {
         lane->updateLengthSum();
     }
     MSNet::getInstance()->getVehicleControl().removePending();
-    for (MSLane* const lane : myWithVehicles2Integrate.getContainer()) {
+    std::vector<MSLane*>& toIntegrate = myWithVehicles2Integrate.getContainer();
+    std::sort(toIntegrate.begin(), toIntegrate.end(), ComparatorIdLess());
+    myWithVehicles2Integrate.unlock();
+    for (MSLane* const lane : toIntegrate) {
         const bool wasInactive = lane->getVehicleNumber() == 0;
         lane->integrateNewVehicles();
         if (wasInactive && lane->getVehicleNumber() > 0) {
@@ -210,7 +213,6 @@ MSEdgeControl::executeMovements(SUMOTime t) {
             }
         }
     }
-    myWithVehicles2Integrate.unlock();
     if (MSGlobals::gLateralResolution > 0) {
         // multiple vehicle shadows may have entered an inactive lane and would
         // not be sorted otherwise
