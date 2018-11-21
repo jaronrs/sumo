@@ -34,7 +34,9 @@
 #include "MSLane.h"
 #include "MSVehicle.h"
 
+#define PARALLEL_PLAN_MOVE
 #define PARALLEL_EXEC_MOVE
+//#define PARALLEL_CHANGE_LANES
 //#define LOAD_BALANCING
 
 // ===========================================================================
@@ -226,6 +228,9 @@ MSEdgeControl::executeMovements(SUMOTime t) {
 void
 MSEdgeControl::changeLanes(const SUMOTime t) {
     std::vector<MSLane*> toAdd;
+#ifdef PARALLEL_CHANGE_LANES
+    std::vector<MSEdge*> recheckLaneUsage;
+#endif
     MSGlobals::gComputeLC = true;
     for (std::list<MSLane*>::iterator i = myActiveLanes.begin(); i != myActiveLanes.end();) {
         LaneUsage& lu = myLanes[(*i)->getNumericalID()];
@@ -233,6 +238,11 @@ MSEdgeControl::changeLanes(const SUMOTime t) {
             MSEdge& edge = (*i)->getEdge();
             if (myLastLaneChange[edge.getNumericalID()] != t) {
                 myLastLaneChange[edge.getNumericalID()] = t;
+#ifdef PARALLEL_CHANGE_LANES
+                MSLane* lane = edge.getLanes()[0];
+                myThreadPool.add(lane->getLaneChangeTask(t), lane->getRNGIndex() % myThreadPool.size());
+                recheckLaneUsage.push_back(edge);
+#else
                 edge.changeLanes(t);
                 const std::vector<MSLane*>& lanes = edge.getLanes();
                 for (std::vector<MSLane*>::const_iterator i = lanes.begin(); i != lanes.end(); ++i) {
@@ -246,12 +256,32 @@ MSEdgeControl::changeLanes(const SUMOTime t) {
                         lu.amActive = true;
                     }
                 }
+#endif
             }
             ++i;
         } else {
             i = myActiveLanes.end();
         }
     }
+    
+#ifdef PARALLEL_CHANGE_LANES
+    myThreadPool.waitAll(false);
+    for (MSEdge* e : recheckLaneUsage) {
+        const std::vector<MSLane*>& lanes = e->getLanes();
+        for (std::vector<MSLane*>::const_iterator i = lanes.begin(); i != lanes.end(); ++i) {
+            LaneUsage& lu = myLanes[(*i)->getNumericalID()];
+            //if ((*i)->getID() == "disabled") {
+            //    std::cout << SIMTIME << " vehicles=" << toString((*i)->getVehiclesSecure()) << "\n";
+            //    (*i)->releaseVehicles();
+            //}
+            if ((*i)->getVehicleNumber() > 0 && !lu.amActive) {
+                toAdd.push_back(*i);
+                lu.amActive = true;
+            }
+        }
+    }
+#endif
+
     MSGlobals::gComputeLC = false;
     for (std::vector<MSLane*>::iterator i = toAdd.begin(); i != toAdd.end(); ++i) {
         myActiveLanes.push_front(*i);
