@@ -1706,10 +1706,6 @@ MSLane::executeMovements(const SUMOTime t) {
                 }
             } // else look for a (waiting) vehicle that isn't stopped?
         }
-    } else {
-        // avoid numerical instability
-        myBruttoVehicleLengthSum = 0;
-        myNettoVehicleLengthSum = 0;
     }
     if (MSGlobals::gLateralResolution > 0) {
         // trigger sorting of vehicles as their order may have changed
@@ -1724,6 +1720,11 @@ MSLane::updateLengthSum() {
     myNettoVehicleLengthSum -= myNettoVehicleLengthSumToRemove;
     myBruttoVehicleLengthSumToRemove = 0;
     myNettoVehicleLengthSumToRemove = 0;
+    if (myVehicles.empty()) {
+        // avoid numerical instability
+        myBruttoVehicleLengthSum = 0;
+        myNettoVehicleLengthSum = 0;
+    }
 }
 
 
