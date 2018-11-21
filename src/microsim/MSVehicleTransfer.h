@@ -141,6 +141,8 @@ protected:
         VehicleInformation(SUMOTime t, MSVehicle* veh, SUMOTime proceedTime, bool parking)
             : myTransferTime(t), myVeh(veh), myProceedTime(proceedTime), myParking(parking) { }
 
+        /// @brief sort by vehicle ID for repeatable parallel simulation
+        bool operator<(const VehicleInformation& v2) const;
     };
 
 

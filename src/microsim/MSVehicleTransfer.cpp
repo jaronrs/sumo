@@ -46,6 +46,12 @@ const double MSVehicleTransfer::TeleportMinSpeed = 1;
 // ===========================================================================
 // member method definitions
 // ===========================================================================
+bool 
+MSVehicleTransfer::VehicleInformation::operator<(const VehicleInformation& v2) const {
+    return myVeh->getID() < v2.myVeh->getID();
+}
+
+
 void
 MSVehicleTransfer::add(const SUMOTime t, MSVehicle* veh) {
     if (veh->isParking()) {
@@ -90,6 +96,7 @@ void
 MSVehicleTransfer::checkInsertions(SUMOTime time) {
     // go through vehicles
     auto& vehInfos = myVehicles.getContainer();
+    std::sort(vehInfos.begin(), vehInfos.end());
     for (auto i = vehInfos.begin(); i != vehInfos.end();) {
         // vehicle information cannot be const because we need to assign the proceed time
         VehicleInformation& desc = *i;
