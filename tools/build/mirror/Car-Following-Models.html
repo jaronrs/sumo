@@ -1,0 +1,65 @@
+<a id="top"></a>
+
+						<div class="mw-indicators">
+</div>
+			<h1 id="firstHeading" class="firstHeading" lang="en">Car-Following-Models</h1>
+						<div id="bodyContent" class="mw-body-content">
+									<div id="siteSub">From Sumo</div>
+								<div id="contentSub"></div>
+												
+				<div id="mw-content-text" lang="en" dir="ltr" class="mw-content-ltr"><div id="toc" class="toc"><div id="toctitle"><h2>Contents</h2></div>
+<ul>
+<li class="toclevel-1 tocsection-1"><a href="#Car-Following_Models"><span class="tocnumber">1</span> <span class="toctext">Car-Following Models</span></a>
+<ul>
+<li class="toclevel-2 tocsection-2"><a href="#Links"><span class="tocnumber">1.1</span> <span class="toctext">Links</span></a></li>
+<li class="toclevel-2 tocsection-3"><a href="#Model_Parameters"><span class="tocnumber">1.2</span> <span class="toctext">Model Parameters</span></a>
+<ul>
+<li class="toclevel-3 tocsection-4"><a href="#actionStepLength"><span class="tocnumber">1.2.1</span> <span class="toctext">actionStepLength</span></a></li>
+<li class="toclevel-3 tocsection-5"><a href="#tau"><span class="tocnumber">1.2.2</span> <span class="toctext">tau</span></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+
+<h1><span class="mw-headline" id="Car-Following_Models">Car-Following Models</span></h1>
+<p>This overview page collects information regarding car-following models in <a href="SUMO.html" title="SUMO">SUMO</a>. It is still a stub and needs be expanded.
+</p>
+<h2><span class="mw-headline" id="Links">Links</span></h2>
+<ul><li> <a href="Publications.html#Car-Following_Models" title="Publications">Publications on car-following models</a></li>
+<li> <a href="Developer/How_To/Car-Following_Model.html" title="Developer/How To/Car-Following Model">How to implement a new car-following model</a></li>
+<li> <a href="Developer/Implementation_Notes/Vehicle_Models.html" title="Developer/Implementation Notes/Vehicle Models">More implementation notes on car-following models</a></li></ul>
+<h2><span class="mw-headline" id="Model_Parameters">Model Parameters</span></h2>
+<p>Most car-following models have their own set of parameters. Because some models have a common ancestry they share some parameters. These are described below.
+</p>
+<h3><span class="mw-headline" id="actionStepLength">actionStepLength</span></h3>
+<p>This parameter is used to decouple the simulation step length (option <span style="color: #111144; font-weight: bold; white-space: pre;">--step-length</span>) from the frequency of driver decision making. It can be set either in the <span class="inlxml">&lt;vType&gt;</span>-definition as attribute <i>actionStepLength</i> or by setting a default value for all vTypes using option <span style="color: #111144; font-weight: bold; white-space: pre;">--default.action-step-length <a href="Basics/Notation.html#Referenced_Data_Types" title="Basics/Notation"><i>&lt;FLOAT&gt;</i></a></span>.
+</p><p>By default, the action step length is equal to the simulation step length which works well for the default step length of 1s. When performing sub-second simulation by setting a lower step-length value, it may be useful to maintain a higher action step length in order to model reaction times and also in order to reduce computational demand and thus speed up the simulation.
+</p>
+<h3><span class="mw-headline" id="tau">tau</span></h3>
+<p>This parameter is intended to model a drivers desired time headway (in seconds). It is used by all models. Drivers attempt to maintain a minimum time gap of tau between the rear bumper of their leader and their own front-bumper + minGap to assure the possibility to brake in time when their leader starts braking and they need tau seconds reaction time to start breaking as well. The real reaction time is fundamentally limited by the simulation step size (<a href="SUMO.html" title="SUMO">SUMO</a> option <span style="color: #111144; font-weight: bold; white-space: pre;">--step-length <a href="Basics/Notation.html#Referenced_Data_Types" title="Basics/Notation"><i>&lt;FLOAT&gt;</i></a></span>), resp. the action step length (option <span style="color: #111144; font-weight: bold; white-space: pre;">--default.action-step-length <a href="Basics/Notation.html#Referenced_Data_Types" title="Basics/Notation"><i>&lt;FLOAT&gt;</i></a></span>, parameter ). For that reason a value of tau below this step-size may lead to collisions if the leader suddenly starts braking hard. If tau is larger then step-size the situation is safe but drivers will still react during each simulation step unless the option <span style="color: #111144; font-weight: bold; white-space: pre;">--default.action-step-length</span> is used.
+</p>
+<!-- 
+NewPP limit report
+CPU time usage: 0.016 seconds
+Real time usage: 0.020 seconds
+Preprocessor visited node count: 58/1000000
+Preprocessor generated node count: 182/1000000
+Post‐expand include size: 836/2097152 bytes
+Template argument size: 279/2097152 bytes
+Highest expansion depth: 3/40
+Expensive parser function count: 0/100
+-->
+
+<!-- 
+Transclusion expansion time report (%,ms,calls,template)
+100.00%    7.115      1 - -total
+ 64.75%    4.607      5 - Template:Option
+ 21.52%    1.531      3 - Template:DT_FLOAT
+ 20.96%    1.491      1 - Template:XML
+-->
+
+<!-- Saved in parser cache with key sumoSimWiki:pcache:idhash:551-0!*!0!!en!*!* and timestamp 20181011091918 and revision id 10749
+ -->
+</div>									</div><hr/><div id="lastmod">This page was last modified on 19 April 2018, at 12:29.</div>

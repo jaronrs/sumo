@@ -1,0 +1,97 @@
+<a id="top"></a>
+
+						<div class="mw-indicators">
+</div>
+			<h1 id="firstHeading" class="firstHeading" lang="en">Basics/Notation</h1>
+						<div id="bodyContent" class="mw-body-content">
+									<div id="siteSub">From Sumo</div>
+								<div id="contentSub"></div>
+												
+				<div id="mw-content-text" lang="en" dir="ltr" class="mw-content-ltr"><p>The documentation within this wiki uses coloring to differ between different type of information. Below, these annotations and colors are described.
+</p>
+<div id="toc" class="toc"><div id="toctitle"><h2>Contents</h2></div>
+<ul>
+<li class="toclevel-1 tocsection-1"><a href="#Command_Line"><span class="tocnumber">1</span> <span class="toctext">Command Line</span></a></li>
+<li class="toclevel-1 tocsection-2"><a href="#Application_Options"><span class="tocnumber">2</span> <span class="toctext">Application Options</span></a></li>
+<li class="toclevel-1 tocsection-3"><a href="#XML_Examples"><span class="tocnumber">3</span> <span class="toctext">XML Examples</span></a></li>
+<li class="toclevel-1 tocsection-4"><a href="#Referenced_Data_Types"><span class="tocnumber">4</span> <span class="toctext">Referenced Data Types</span></a>
+<ul>
+<li class="toclevel-2 tocsection-5"><a href="#Referenced_File_Types"><span class="tocnumber">4.1</span> <span class="toctext">Referenced File Types</span></a></li>
+</ul>
+</li>
+<li class="toclevel-1 tocsection-6"><a href="#Further_Schemes"><span class="tocnumber">5</span> <span class="toctext">Further Schemes</span></a></li>
+</ul>
+</div>
+
+<h2><span class="mw-headline" id="Command_Line">Command Line</span></h2>
+<p>If you encounter something like this:
+</p>
+<pre>netconvert --visum=MyVisumNet.inp --output-file=MySUMONet.net.xml
+</pre>
+<p>you should know that this is a call on the command line. There may be also a '\' at the end of a line. This indicates that you have to continue typing without pressing return (ignoring both the '\' and the following newline). The following example means exactly the same as the one above:
+</p>
+<pre>netconvert --visum=MyVisumNet.inp \
+  --output-file=MySUMONet.net.xml
+</pre>
+<h2><span class="mw-headline" id="Application_Options">Application Options</span></h2>
+<p>Command line option names are normally coloured <span style="color: #111144; font-weight: bold; white-space: pre;">this way</span>. Their values <span style="color: #111144; font-weight: bold; white-space: pre;"><i>&lt;LIKE THIS&gt;</i></span>.
+</p>
+<h2><span class="mw-headline" id="XML_Examples">XML Examples</span></h2>
+<p>XML-elements and attributes are shown <span class="inlxml">like this</span>. Their values, if variable, <span class="inlxml"><i>&lt;LIKE THIS&gt;</i></span>.
+</p><p>Complete examples of XML-Files are shown like the following:
+</p>
+<pre class="xml">
+&lt;myType&gt;
+   &lt;myElem myAttr1=&quot;0&quot; myAttr2=&quot;0.0&quot;/&gt;
+   &lt;myElem myAttr1=&quot;1&quot; myAttr2=&quot;-500.0&quot;/&gt;
+&lt;/myType&gt;
+</pre>
+<h2><span class="mw-headline" id="Referenced_Data_Types">Referenced Data Types</span></h2>
+<ul><li> <i>&lt;BOOL&gt;</i>: a boolean value, use "t" or "true" and "f" or "false" for encoding</li>
+<li> <i>&lt;INT&gt;</i>: an integer value, may be negative</li>
+<li> <i>&lt;UINT&gt;</i>: an unsigned integer value, must be &gt;=0</li>
+<li> <i>&lt;FLOAT&gt;</i>: a floating point number</li>
+<li> <i>&lt;TIME&gt;</i>: time, given in seconds; fractions are allowed, e.g. "12.1"</li>
+<li> <i>&lt;STRING&gt;</i>: any string, but use ASCII-characters only</li>
+<li> <i>&lt;ID&gt;</i>: a string which must not contain the following characters: '#'</li></ul>
+<div style="background: #ffcc44; padding: .5em; border: 1px dashed #ff8800; margin-right:10px; margin-left:10px;"><b>Caution:</b><br />The list of not allowed characters is incomplete</div>
+<ul><li> <i>&lt;FILE&gt;</i> or <i>&lt;FILENAME&gt;</i>: the (relative or absolute) path to a file; see also <a href="#Referenced_File_Types">#Referenced File Types</a></li>
+<li> <i>&lt;PATH&gt;</i>: a (a relative or absolute) path (usually to a folder)</li>
+<li> <i>&lt;COLOR&gt;</i>: a quadruple of floats separated by ',' (<i>&lt;FLOAT&gt;</i>,<i>&lt;FLOAT&gt;</i>,<i>&lt;FLOAT&gt;</i>,<i>&lt;FLOAT&gt;</i>), which describe the red, green, blue, and alpha component ranging from 0.0 to 1.0 (the alpha component is optional), alternatively the list may contain integers in the 0-255 range. Please note that the separator must be a comma and there are no spaces allowed. The color may also be defined using a single string with a <a rel="nofollow" class="external text" href="http://en.wikipedia.org/wiki/Web_colors#Hex_triplet">HTML color code</a> or one of the basic colors ("red", "green", "blue", "yellow", "cyan", "magenta", "black", "white", "grey")</li>
+<li> <i>&lt;2D-POSITION&gt;</i>: two floats separated by ',' (<i>&lt;FLOAT&gt;</i>,<i>&lt;FLOAT&gt;</i>), which describe the x- and the y-offset, respectively. z is 0 implicitly</li>
+<li> <i>&lt;3D-POSITION&gt;</i>: three floats separated by ',' (<i>&lt;FLOAT&gt;</i>,<i>&lt;FLOAT&gt;</i>,<i>&lt;FLOAT&gt;</i>), which describe the x- , y- and the z-offset, respectively</li>
+<li> <i>&lt;POSITION-VECTOR&gt;</i>: A list of 2D- or 3D-Positions separate by ' '. I.e. (<i>&lt;2D-POSITION&gt;</i> <i>&lt;2D-POSITION&gt;</i>,<i>&lt;3D-POSITION&gt;</i>)</li>
+<li> <i>&lt;2D-BOUNDING_BOX&gt;</i>: four floats separated by ',' (<i>&lt;FLOAT&gt;</i>,<i>&lt;FLOAT&gt;</i>,<i>&lt;FLOAT&gt;</i>,<i>&lt;FLOAT&gt;</i>), which describe x-minimum, y-minimum, x-maximum, and y-maximum</li>
+<li> <i>&lt;PROJ_DEFINITION&gt;</i>: a string containing the projection definition as used by proj.4; please note that you have to embed the definition string in quotes</li></ul>
+<h3><span class="mw-headline" id="Referenced_File_Types">Referenced File Types</span></h3>
+<ul><li> <i>&lt;NETWORK_FILE&gt;</i>: a <a href="../Networks/SUMO_Road_Networks.html" title="Networks/SUMO Road Networks">SUMO network file</a> as built by <a href="../NETGENERATE.html" title="NETGENERATE">NETGENERATE</a> or <a href="../NETCONVERT.html" title="NETCONVERT">NETCONVERT</a> </li>
+<li> <i>&lt;ROUTES_FILE&gt;</i>: a <a href="../Definition_of_Vehicles,_Vehicle_Types,_and_Routes.html" title="Definition of Vehicles, Vehicle Types, and Routes">SUMO routes file</a> as built by <a href="../DUAROUTER.html" title="DUAROUTER">DUAROUTER</a> or <a href="../JTRROUTER.html" title="JTRROUTER">JTRROUTER</a> or by hand</li>
+<li> <i>&lt;TYPE_FILE&gt;</i>: a <a href="../SUMO_edge_type_file.html" title="SUMO edge type file">SUMO edge type file</a>, built by hand or downloaded</li>
+<li> <i>&lt;OSM_FILE&gt;</i>: a <a href="../OpenStreetMap_file.html" title="OpenStreetMap file">OpenStreetMap file</a> as exported from <a rel="nofollow" class="external text" href="http://www.openstreetmap.org/">OpenStreetMap</a></li></ul>
+<h2><span class="mw-headline" id="Further_Schemes">Further Schemes</span></h2>
+<p>Brackets '[' and ']' indicate that the enclosed information is optional. Brackets '&lt;' and '&gt;' indicate a variable - insert your own value in here.
+</p><p><i><b>&lt;SUMO_HOME&gt;</b></i> is the path you have saved your SUMO-package into.
+</p>
+<!-- 
+NewPP limit report
+CPU time usage: 0.032 seconds
+Real time usage: 0.035 seconds
+Preprocessor visited node count: 57/1000000
+Preprocessor generated node count: 134/1000000
+Post‐expand include size: 379/2097152 bytes
+Template argument size: 71/2097152 bytes
+Highest expansion depth: 2/40
+Expensive parser function count: 0/100
+-->
+
+<!-- 
+Transclusion expansion time report (%,ms,calls,template)
+100.00%    9.813      1 - -total
+ 27.72%    2.720      2 - Template:Option
+ 23.83%    2.338      1 - Template:Caution
+ 19.67%    1.930      1 - Template:SUMO
+-->
+
+<!-- Saved in parser cache with key sumoSimWiki:pcache:idhash:184-0!*!0!!en!*!* and timestamp 20181011075506 and revision id 6661
+ -->
+</div>									</div><hr/><div id="lastmod">This page was last modified on 13 November 2015, at 07:06.</div>

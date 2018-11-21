@@ -1,0 +1,80 @@
+<a id="top"></a>
+
+						<div class="mw-indicators">
+</div>
+			<h1 id="firstHeading" class="firstHeading" lang="en">Developer/Documentation Build</h1>
+						<div id="bodyContent" class="mw-body-content">
+									<div id="siteSub">From Sumo</div>
+								<div id="contentSub"></div>
+												
+				<div id="mw-content-text" lang="en" dir="ltr" class="mw-content-ltr"><p>When accessing SUMO web space, you will find an index page, and several additional HTML pages. You will also find a link to a wiki and to the <a rel="nofollow" class="external text" href="https://github.com/DLR-TS/sumo">GitHub presence</a>. In the following, it is described how these documentation parts are build, and mirrored.
+</p><p>After some tries, we decided to work as following:
+</p>
+<ul><li> The documentation is "developed" within the wiki; the wiki refers to the state of the package as-is within the current head of the master branch of the main <a rel="nofollow" class="external text" href="https://github.com/DLR-TS/sumo">Git repository</a>.</li>
+<li> The HTML documentation is generated from the wiki</li></ul>
+<div id="toc" class="toc"><div id="toctitle"><h2>Contents</h2></div>
+<ul>
+<li class="toclevel-1 tocsection-1"><a href="#Documentation_Parts"><span class="tocnumber">1</span> <span class="toctext">Documentation Parts</span></a>
+<ul>
+<li class="toclevel-2 tocsection-2"><a href="#Wiki"><span class="tocnumber">1.1</span> <span class="toctext">Wiki</span></a></li>
+<li class="toclevel-2 tocsection-3"><a href="#HTML_pages"><span class="tocnumber">1.2</span> <span class="toctext">HTML pages</span></a></li>
+</ul>
+</li>
+<li class="toclevel-1 tocsection-4"><a href="#HTML_pages_generation"><span class="tocnumber">2</span> <span class="toctext">HTML pages generation</span></a></li>
+</ul>
+</div>
+
+<h1><span class="mw-headline" id="Documentation_Parts">Documentation Parts</span></h1>
+<h2><span class="mw-headline" id="Wiki">Wiki</span></h2>
+<p><b>scope</b>
+</p>
+<dl><dd>The wiki should include the complete user documentation, as well as finalized developer documents, and any kind of additional documentation as long as it is in a state which can be presented. Incomplete or outdated wiki documents should have the prefix "Purgatory/" and should not be linked from any other documents.</dd></dl>
+<p><b>rights</b>
+</p>
+<dl><dd>The rights to edit the wiki are given to known users on request.</dd></dl>
+<p><b>backup</b>
+</p>
+<dl><dd><font color="red">Redescribe</font>; Wiki-pages can be mirrored using <i>tools/build/mirrorWiki.py</i></dd></dl>
+<p>There are currently two options for looking up information from wiki versions before 0.13.1
+</p>
+<ul><li> Use the wiki-history for an individual wiki page</li>
+<li> Use the <i>sumo-user.pdf</i> included in older releases. This pdf was compiled from the wiki at the time of the release and should contain most of the wiki content.</li></ul>
+<h2><span class="mw-headline" id="HTML_pages">HTML pages</span></h2>
+<p><b>scope</b>
+</p>
+<dl><dd>HTML pages contain all information stored in the wiki at the time of the last release.</dd></dl>
+<p><b>rights</b>
+</p>
+<dl><dd>HTML pages are generated and uploaded by SUMO developers which have access to the web space.</dd></dl>
+<p><b>backup</b>
+</p>
+<dl><dd>A HTML-backup of the wiki is created as part of the linux build. The file <i><b>&lt;SUMO_HOME&gt;</b></i> <i>/Makefile.am</i> defines the task <i>userdoc</i> which calls the script <i>tools/build/buildHTMLDocs.py</i> to create an offline-browsable mirror (excluding special pages such as history and discussion). The backup is included in the regular release starting at version 0.13.1.</dd></dl>
+<h1><span class="mw-headline" id="HTML_pages_generation">HTML pages generation</span></h1>
+<p>The HTML documentation pages are built from the wiki. All scripts needed are located in <i><b>&lt;SUMO_HOME&gt;</b></i>/tools/build. <code>buildHTMLDocs.py</code> is used to retrieve the HTML-representation of wiki-pages. If started with a parameter, this parameter is assumed to be the name of the page to retrieve. If no parameter is given, <code>getWikiPages.py</code> retrieves the list of all pages, first, from Special::AllPages.
+</p><p>Each of the pages to retrieve is read from the wiki and stripped so that it contains the article HTML only. Links are patched to match the depth of the folder the page is located in. <code>buildHTMLDocs.py</code> changes the links included in this result and retrieves the embedded images (only the "normal" version, no thumbnails) and saves the resulting HTML with no header/tail into a file located in "mirror" named using the articles' name. The folder "mirror" is generated.
+</p><p>All images found in the read pages are retrieved and stored in "mirror/images".
+</p><p>The HTML template is located in <i><b>&lt;SUMO_HOME&gt;</b></i>/docs/wiki as "index.html". <code>getWikiPages.py</code> reads the wiki-text of "SUMO User Documentation", extracts the content list, parses it into HTML, and embeds it into "index.html" between the comments &lt;!-- nav begins --&gt; and &lt;!-- nav ends --&gt;.
+</p><p>Then, the pages to convert stored in "mirror" are read and their content is inserted into "index.html" between the comments &lt;!-- content begins --&gt; and &lt;!-- content ends --&gt;. The so obtained HTML-pages are stored into "docs". 
+</p><p>The images stored in "mirror/images" are copied to "docs/images".
+</p>
+<!-- 
+NewPP limit report
+CPU time usage: 0.008 seconds
+Real time usage: 0.011 seconds
+Preprocessor visited node count: 22/1000000
+Preprocessor generated node count: 48/1000000
+Post‐expand include size: 63/2097152 bytes
+Template argument size: 0/2097152 bytes
+Highest expansion depth: 2/40
+Expensive parser function count: 0/100
+-->
+
+<!-- 
+Transclusion expansion time report (%,ms,calls,template)
+100.00%    1.880      1 - -total
+ 77.49%    1.457      3 - Template:SUMO
+-->
+
+<!-- Saved in parser cache with key sumoSimWiki:pcache:idhash:175-0!*!*!!en!*!* and timestamp 20181010153526 and revision id 10333
+ -->
+</div>									</div><hr/><div id="lastmod">This page was last modified on 6 November 2017, at 15:38.</div>

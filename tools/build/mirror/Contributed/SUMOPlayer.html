@@ -1,0 +1,106 @@
+<a id="top"></a>
+
+						<div class="mw-indicators">
+</div>
+			<h1 id="firstHeading" class="firstHeading" lang="en">Contributed/SUMOPlayer</h1>
+						<div id="bodyContent" class="mw-body-content">
+									<div id="siteSub">From Sumo</div>
+								<div id="contentSub"></div>
+												
+				<div id="mw-content-text" lang="en" dir="ltr" class="mw-content-ltr"><div style="background: #ffffdd; padding: .5em; border: 1px dashed #ffcc44; margin-right:10px; margin-left:10px;"><b>Note:</b><br />SUMOPlayer was removed in release 0.24.0. You should be able to use <a href="../Tools/TraceExporter.html" title="Tools/TraceExporter">traceExporter.py</a> for the same task.</div>
+<h2><span class="mw-headline" id="Meta-Information">Meta-Information</span></h2>
+<ul><li> <b>Location</b>: The build-file and the sources can be found in &lt;SUMO_DIST&gt;/tools/contributed/sumoplayer</li>
+<li> <b>Language</b>: Java &gt;=1.5</li>
+<li> <b>Author</b>: Michael Willigens</li></ul>
+<h2><span class="mw-headline" id="From_README">From README</span></h2>
+<pre>
+# This is file gives a brief overview on SUMPlayer usage.
+# SUMOPlayer can be used to play SUMO network-dump files
+# in realtime (if possible) to latitude/longitude coordinates.
+# It can be customized in any way by implemting
+# de.psi.telco.sumoplayer.SUMOLocationListener
+# SEE:
+# public interface SUMOLocationListener {
+# 	public void LocationUpdated(String vehicleId, int timestep, double lon, double lat, double speed);
+# }
+# You can call SUMOPlayer with your own implementation by using the
+# -l &quot;&lt;classname&gt;&quot; parameter.
+# If not used, SUMOPlayer uses STDOUT CVS style like:
+# &lt;vehicle_id&gt;|&lt;timestep&gt;|&lt;lon&gt;|&lt;lat&gt;|&lt;speed&gt;
+
+# Eclipse integration is easily possible by:
+# new-project -&gt; from existing ant buildfile (build.xml)
+
+# see possible ant tasks:
+$&gt; ant -projecthelp
+
+# compile
+$&gt; ant sumoplayer.jar
+
+# run sumoPlayer with:
+$&gt; ant sumplayer.run
+# ... or even better integrated in your project by jarfile:
+$&gt; java -jar sumoplayer.jar
+# possible parameters:
+# ANT param                         # desctiption
+# JAR param
+
+ -Dnetfile=&lt;sumo_network_xml_file&gt;  # the used sumo network file
+ -n                                 # needed for geo coordinate lookups
+
+ -Dndump=&lt;sumo_ndump_xml_file&gt;      # sumo network-dump simulation file
+ -d
+
+ -Dequipped=&lt;propability&gt;           # a floating value between 0 and 1
+ -e                                 # defining the number of tracked 
+                                    # vehicles. 0.01 is 1%
+
+ -Djitter=&lt;value_in_meters&gt;         # a random GPS jitter in meters
+ -j
+
+ -Dlistener=&lt;full_java_classname&gt;   # the used java implementation of
+ -l                                 # SUMOLocationListener
+                                    # default: 
+                                    # de.psi.telco.sumoplayer.SUMOPipedLocationListener
+                                    #    (stdout CSV style data)
+
+
+
+# JAVA DOC
+$&gt; ant javadoc                      # creates JAVA DOCS in /build/javadoc
+</pre>
+<h2><span class="mw-headline" id="Additional_Information">Additional Information</span></h2>
+<p>You can run the player as following:
+</p>
+<pre> sumo ... --no-step-log --netstate-dump - | java -jar SUMOPlayer.jar -d - -c &lt;propability&gt; -n &lt;used_network_file&gt; ...
+</pre>
+<p>("-" redirects the dump to stdout)
+</p><p>The basic functionality is as following
+</p>
+<ul><li> the player reads the network file for projection information</li>
+<li> the player reads projected lanes</li>
+<li> the player tries to put each output into one second</li>
+<li> the player chooses vehicles randomly</li>
+<li> the player writes the longitude and latitude of every vehicle into a file or prints them</li></ul>
+
+<!-- 
+NewPP limit report
+CPU time usage: 0.008 seconds
+Real time usage: 0.011 seconds
+Preprocessor visited node count: 26/1000000
+Preprocessor generated node count: 62/1000000
+Post‐expand include size: 263/2097152 bytes
+Template argument size: 127/2097152 bytes
+Highest expansion depth: 2/40
+Expensive parser function count: 0/100
+-->
+
+<!-- 
+Transclusion expansion time report (%,ms,calls,template)
+100.00%    1.854      1 - -total
+100.00%    1.854      1 - Template:Note
+-->
+
+<!-- Saved in parser cache with key sumoSimWiki:pcache:idhash:70-0!*!0!!*!*!* and timestamp 20181010222055 and revision id 8190
+ -->
+</div>									</div><hr/><div id="lastmod">This page was last modified on 31 October 2016, at 13:51.</div>

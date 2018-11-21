@@ -1,0 +1,112 @@
+<a id="top"></a>
+
+						<div class="mw-indicators">
+</div>
+			<h1 id="firstHeading" class="firstHeading" lang="en">Developer/CppFileTemplate</h1>
+						<div id="bodyContent" class="mw-body-content">
+									<div id="siteSub">From Sumo</div>
+								<div id="contentSub"></div>
+												
+				<div id="mw-content-text" lang="en" dir="ltr" class="mw-content-ltr"><pre>/****************************************************************************/
+// Eclipse SUMO, Simulation of Urban MObility; see <a rel="nofollow" class="external free" href="https://eclipse.org/sumo">https://eclipse.org/sumo</a>
+// Copyright (C) &lt;YEAR OF CREATION&gt;-&lt;CURRENT YEAR&gt; German Aerospace Center (DLR) and others.
+// This program and the accompanying materials
+// are made available under the terms of the Eclipse Public License v2.0
+// which accompanies this distribution, and is available at
+// <a rel="nofollow" class="external free" href="http://www.eclipse.org/legal/epl-v20.html">http://www.eclipse.org/legal/epl-v20.html</a>
+// SPDX-License-Identifier: EPL-2.0
+/****************************************************************************/
+/// @file    &lt;FILENAME&gt;
+/// @author  &lt;AUTHOR'S NAME, ONE SEPARATE LINE FOR EACH AUTHOR&gt;
+/// @author  &lt;AUTHOR'S NAME 2&gt;
+/// @author  &lt;AUTHOR'S NAME 3&gt;
+/// @date    &lt;FILE CREATION DATE&gt;
+/// @version $Id: $
+///
+/// &lt;A BRIEF DESCRIPTION OF THE FILE'S CONTENTS&gt;
+/****************************************************************************/
+
+// ===========================================================================
+// included modules
+// ===========================================================================
+#ifdef _MSC_VER
+#include &lt;windows_config.h&gt;
+#else
+#include &lt;config.h&gt;
+#endif
+
+#include &lt;StandardLibrary&gt;     // Standard libraries
+#include &lt;SUMOLibrary&gt;         // SUMO libraries
+
+#include "myHeaderFile1"       // Own libraries
+#include "myHeaderFile2"
+
+
+// ===========================================================================
+// static member definitions
+// ===========================================================================
+&lt;parameterType&gt; OwnClass::myStaticMember = value;    // Define here values of static members
+
+
+// ===========================================================================
+// member method definitions
+// ===========================================================================
+OwnClass::OwnClass(&lt;parameterType&gt; parameter1, &lt;parameterType&gt; parameter2,... &lt;parameterType&gt; parametern)&#160;:
+    parentClass(),             // Call to parent class (if inherit)
+    myParameter1(parameter1),  // values of members should be inicializated with this method
+    myParameter2(parameter1),
+    ...
+    myParametern(parametern) {
+    // Code of constructor
+}
+
+
+OwnClass::~OwnClass() {}   // Declare always destructor, even if is empty
+
+
+void 
+OwnClass::function() const {
+    // code
+}
+
+
+&lt;parameterType&gt; 
+OwnClass::getParameter1() const {
+    return myParameter1;
+}
+
+// ---------------------------------------------------------------------------
+// Class::Subclass - methods &lt;LEAVE OUT IF METHODS ARE OF ONE CLASS ONLY&gt;
+// ---------------------------------------------------------------------------
+
+OwnClass::SubClass::SubClass()&#160;:
+    myPrivateParameter(0) {
+    // code of constructor
+}
+
+
+OwnClass::SubClass::~SubClass() {}
+
+
+/****************************************************************************/
+</pre>
+<!-- 
+NewPP limit report
+CPU time usage: 0.008 seconds
+Real time usage: 0.006 seconds
+Preprocessor visited node count: 1/1000000
+Preprocessor generated node count: 4/1000000
+Post‐expand include size: 0/2097152 bytes
+Template argument size: 0/2097152 bytes
+Highest expansion depth: 1/40
+Expensive parser function count: 0/100
+-->
+
+<!-- 
+Transclusion expansion time report (%,ms,calls,template)
+100.00%    0.000      1 - -total
+-->
+
+<!-- Saved in parser cache with key sumoSimWiki:pcache:idhash:40-0!*!*!*!*!*!* and timestamp 20181011091627 and revision id 10546
+ -->
+</div>									</div><hr/><div id="lastmod">This page was last modified on 11 January 2018, at 13:42.</div>

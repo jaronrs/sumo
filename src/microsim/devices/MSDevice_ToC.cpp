@@ -54,6 +54,8 @@
 // default value for the average rate at which the driver's awareness recovers to
 // 1.0 after a ToC has been performed
 #define DEFAULT_RECOVERY_RATE 0.1
+// Default value of the awareness below which no lane-changes are performed
+#define DEFAULT_LCABSTINENCE 0.0
 // The default value for the average awareness a driver has initially after a ToC
 #define DEFAULT_INITIAL_AWARENESS 0.5
 // The default value for the deceleration rate applied during a 'minimum risk maneuver'
@@ -70,6 +72,7 @@
 // ---------------------------------------------------------------------------
 std::set<MSDevice_ToC*> MSDevice_ToC::instances = std::set<MSDevice_ToC*>();
 std::set<std::string> MSDevice_ToC::createdOutputFiles;
+int MSDevice_ToC::LCModeMRM = 768; // = 0b001100000000 - no autonomous changes, no speed adaptation
 
 // ===========================================================================
 // method definitions
@@ -90,8 +93,10 @@ MSDevice_ToC::insertOptions(OptionsCont& oc) {
     oc.addDescription("device.toc.responseTime", "ToC Device", "Average response time needed by a driver to take back control.");
     oc.doRegister("device.toc.recoveryRate", new Option_Float(DEFAULT_RECOVERY_RATE));
     oc.addDescription("device.toc.recoveryRate", "ToC Device", "Recovery rate for the driver's awareness after a ToC.");
+    oc.doRegister("device.toc.lcAbstinence", new Option_Float(DEFAULT_LCABSTINENCE));
+    oc.addDescription("device.toc.lcAbstinence", "ToC Device", "Attention level below which a driver restrains from performing lane changes (value in [0,1]).");
     oc.doRegister("device.toc.initialAwareness", new Option_Float(DEFAULT_INITIAL_AWARENESS));
-    oc.addDescription("device.toc.initialAwareness", "ToC Device", "Average awareness a driver has initially after a ToC.");
+    oc.addDescription("device.toc.initialAwareness", "ToC Device", "Average awareness a driver has initially after a ToC (value in [0,1]).");
     oc.doRegister("device.toc.mrmDecel", new Option_Float(DEFAULT_MRM_DECEL));
     oc.addDescription("device.toc.mrmDecel", "ToC Device", "Deceleration rate applied during a 'minimum risk maneuver'.");
     oc.doRegister("device.toc.useColorScheme", new Option_Bool(true));
@@ -109,6 +114,7 @@ MSDevice_ToC::buildVehicleDevices(SUMOVehicle& v, std::vector<MSVehicleDevice*>&
         std::string automatedType = getAutomatedType(v, oc);
         SUMOTime responseTime = TIME2STEPS(getResponseTime(v, oc));
         double recoveryRate = getRecoveryRate(v, oc);
+        double lcAbstinence = getLCAbstinence(v, oc);
         double initialAwareness = getInitialAwareness(v, oc);
         double mrmDecel = getMRMDecel(v, oc);
         bool useColoring = useColorScheme(v, oc);
@@ -117,7 +123,7 @@ MSDevice_ToC::buildVehicleDevices(SUMOVehicle& v, std::vector<MSVehicleDevice*>&
         // build the device
         MSDevice_ToC* device = new MSDevice_ToC(v, deviceID, file,
                                                 manualType, automatedType, responseTime, recoveryRate,
-                                                initialAwareness, mrmDecel, useColoring);
+                                                lcAbstinence, initialAwareness, mrmDecel, useColoring);
         into.push_back(device);
     }
 }
@@ -166,6 +172,11 @@ MSDevice_ToC::getRecoveryRate(const SUMOVehicle& v, const OptionsCont& oc) {
 }
 
 double
+MSDevice_ToC::getLCAbstinence(const SUMOVehicle& v, const OptionsCont& oc) {
+    return getFloatParam(v, oc, "toc.lcAbstinence", DEFAULT_LCABSTINENCE, false);
+}
+
+double
 MSDevice_ToC::getInitialAwareness(const SUMOVehicle& v, const OptionsCont& oc) {
     return getFloatParam(v, oc, "toc.initialAwareness", DEFAULT_INITIAL_AWARENESS, false);
 }
@@ -186,14 +197,14 @@ MSDevice_ToC::useColorScheme(const SUMOVehicle& v, const OptionsCont& oc) {
 // MSDevice_ToC-methods
 // ---------------------------------------------------------------------------
 MSDevice_ToC::MSDevice_ToC(SUMOVehicle& holder, const std::string& id, const std::string& outputFilename,
-                           std::string manualType, std::string automatedType,
-                           SUMOTime responseTime, double recoveryRate, double initialAwareness,
-                           double mrmDecel, bool useColoring) :
+                           std::string manualType, std::string automatedType, SUMOTime responseTime, double recoveryRate,
+                           double lcAbstinence, double initialAwareness, double mrmDecel, bool useColoring) :
     MSVehicleDevice(holder, id),
     myManualTypeID(manualType),
     myAutomatedTypeID(automatedType),
     myResponseTime(responseTime),
     myRecoveryRate(recoveryRate),
+    myLCAbstinence(lcAbstinence),
     myInitialAwareness(initialAwareness),
     myMRMDecel(mrmDecel),
     myCurrentAwareness(1.),
@@ -204,7 +215,8 @@ MSDevice_ToC::MSDevice_ToC(SUMOVehicle& holder, const std::string& id, const std
     myExecuteMRMCommand(nullptr),
     myPrepareToCCommand(nullptr),
     myOutputFile(nullptr),
-    myEvents() {
+    myEvents(),
+    myPreviousLCMode(-1) {
     // Take care! Holder is currently being constructed. Cast occurs before completion.
     myHolderMS = static_cast<MSVehicle*>(&holder);
     // Ensure that the holder receives a driver state as soon as it is created (can't be done here, since myHolderMS is incomplete)
@@ -318,6 +330,7 @@ MSDevice_ToC::~MSDevice_ToC() {
     }
     if (myExecuteMRMCommand != nullptr) {
         myExecuteMRMCommand->deschedule();
+        resetDeliberateLCs();
     }
     if (myPrepareToCCommand != nullptr) {
         myPrepareToCCommand->deschedule();
@@ -331,6 +344,13 @@ MSDevice_ToC::setAwareness(double value) {
         ss << "Truncating invalid value for awareness (" << value << ") to lie in [0,1].";
         WRITE_WARNING(ss.str());
         value = MAX2(0.0, MIN2(1.0, value));
+    }
+    if (myCurrentAwareness >= myLCAbstinence && value < myLCAbstinence) {
+        // Awareness is now below LC abstinence level -> prevent deliberate LCs
+        deactivateDeliberateLCs();
+    } else if (myCurrentAwareness < myLCAbstinence && value >= myLCAbstinence) {
+        // Awareness is now above LC abstinence level -> allow deliberate LCs
+        resetDeliberateLCs();
     }
     myCurrentAwareness = value;
     std::shared_ptr<MSSimpleDriverState> ds = myHolderMS->getDriverState();
@@ -355,8 +375,6 @@ MSDevice_ToC::setVehicleColor() {
 
 void
 MSDevice_ToC::requestMRM() {
-    // Clean up previous MRM Commands
-    descheduleMRM();
     // Remove any preparatory process
     descheduleToCPreparation();
     // .. and any recovery process
@@ -429,6 +447,7 @@ MSDevice_ToC::triggerMRM(SUMOTime /* t */) {
     setState(MRM);
     switchHolderType(myAutomatedTypeID);
     setAwareness(1.);
+    deactivateDeliberateLCs();
 
     // Record event
     if (generatesOutput()) {
@@ -444,6 +463,14 @@ MSDevice_ToC::triggerUpwardToC(SUMOTime /* t */) {
 #ifdef DEBUG_TOC
     std::cout << SIMTIME << " triggerUpwardToC() for vehicle '" << myHolder.getID() << "'" << std::endl;
 #endif
+    descheduleToC();
+    // Eventually stop ToC preparation process
+    descheduleToCPreparation();
+    // Eventually abort MRM
+    descheduleMRM();
+    // Eventually abort awareness recovery process
+    descheduleRecovery();
+
     switchHolderType(myAutomatedTypeID);
     setAwareness(1.);
     setState(AUTOMATED);
@@ -452,14 +479,6 @@ MSDevice_ToC::triggerUpwardToC(SUMOTime /* t */) {
     if (generatesOutput()) {
         myEvents.push(std::make_pair(SIMSTEP, "ToCup"));
     }
-
-    descheduleToC();
-    // Eventually stop ToC preparation process
-    descheduleToCPreparation();
-    // Eventually abort MRM
-    descheduleMRM();
-    // Eventually abort awareness recovery process
-    descheduleRecovery();
 
     return 0;
 }
@@ -470,6 +489,12 @@ MSDevice_ToC::triggerDownwardToC(SUMOTime /* t */) {
 #ifdef DEBUG_TOC
     std::cout << SIMTIME << " triggerDownwardToC() for vehicle '" << myHolder.getID() << "'" << std::endl;
 #endif
+    descheduleToC();
+    // Eventually stop ToC preparation process
+    descheduleToCPreparation();
+    // Eventually abort MRM
+    descheduleMRM();
+
     switchHolderType(myManualTypeID);
 
     // @todo: Sample initial awareness
@@ -489,13 +514,6 @@ MSDevice_ToC::triggerDownwardToC(SUMOTime /* t */) {
     if (generatesOutput()) {
         myEvents.push(std::make_pair(SIMSTEP, "ToCdown"));
     }
-
-    descheduleToC();
-    // Eventually stop ToC preparation process
-    descheduleToCPreparation();
-    // Eventually abort MRM
-    descheduleMRM();
-
     return 0;
 }
 
@@ -509,6 +527,7 @@ MSDevice_ToC::descheduleMRM() {
     // Eventually abort ongoing MRM
     if (myExecuteMRMCommand != nullptr) {
         myExecuteMRMCommand->deschedule();
+        resetDeliberateLCs();
         myExecuteMRMCommand = nullptr;
     }
 }
@@ -576,6 +595,7 @@ MSDevice_ToC::ToCPreparationStep(SUMOTime /* t */) {
 
 SUMOTime
 MSDevice_ToC::MRMExecutionStep(SUMOTime t) {
+    deactivateDeliberateLCs();
     const double currentSpeed = myHolderMS->getSpeed();
 #ifdef DEBUG_TOC
     std::cout << SIMTIME << " MRM step for vehicle '" << myHolder.getID() << "', currentSpeed=" << currentSpeed << std::endl;
@@ -588,20 +608,13 @@ MSDevice_ToC::MRMExecutionStep(SUMOTime t) {
     speedTimeLine.push_back(std::make_pair(t, nextSpeed));
     myHolderMS->getInfluencer().setSpeedTimeLine(speedTimeLine);
 
-    // Prevent lane changes during MRM
-    // TODO: seems not to function
-    std::vector<std::pair<SUMOTime, int> > laneTimeLine;
-    const int currentLane = myHolderMS->getLaneIndex();
-    laneTimeLine.push_back(std::make_pair(t - DELTA_T, currentLane));
-    laneTimeLine.push_back(std::make_pair(t, currentLane));
-    myHolderMS->getInfluencer().setLaneTimeLine(laneTimeLine);
-
     if (myState == MRM) {
         return DELTA_T;
     } else {
 #ifdef DEBUG_TOC
         std::cout << SIMTIME << " Aborting MRM for vehicle '" << myHolder.getID() << "'" << std::endl;
 #endif
+        resetDeliberateLCs();
         return 0;
     }
 }
@@ -651,6 +664,8 @@ MSDevice_ToC::getParameter(const std::string& key) const {
         return toString(myMRMDecel);
     } else if (key == "currentAwareness") {
         return toString(myCurrentAwareness);
+    } else if (key == "lcAbstinence") {
+        return toString(myLCAbstinence);
     } else if (key == "state") {
         return _2string(myState);
     } else if (key == "holder") {
@@ -683,8 +698,17 @@ MSDevice_ToC::setParameter(const std::string& key, const std::string& value) {
         myRecoveryRate = StringUtils::toDouble(value);
     } else if (key == "initialAwareness") {
         myInitialAwareness = StringUtils::toDouble(value);
+    } else if (key == "lcAbstinence") {
+        myLCAbstinence = StringUtils::toDouble(value);
+        if (isManuallyDriven()) {
+            setAwareness(myCurrentAwareness); // to eventually trigger LC-prevention
+        }
     } else if (key == "currentAwareness") {
-        myCurrentAwareness = StringUtils::toDouble(value);
+        if (isManuallyDriven()) {
+            setAwareness(StringUtils::toDouble(value));
+        } else {
+            WRITE_WARNING("Setting device.toc.currentAwareness during automated mode has no effect.")
+        }
     } else if (key == "mrmDecel") {
         myMRMDecel = StringUtils::toDouble(value);
     } else if (key == "requestToC") {
@@ -771,6 +795,41 @@ MSDevice_ToC::cleanup() {
     }
 }
 
+
+void
+MSDevice_ToC::resetDeliberateLCs() {
+    if (myPreviousLCMode != -1) {
+        myHolderMS->getInfluencer().setLaneChangeMode(myPreviousLCMode);
+#ifdef DEBUG_TOC
+        std::cout << "MSDevice_ToC::resetLCMode() restoring LC Mode of vehicle '" << myHolder.getID() << "' to " << myPreviousLCMode << std::endl;
+#endif
+    }
+    myPreviousLCMode = -1;
+}
+
+
+void
+MSDevice_ToC::deactivateDeliberateLCs() {
+    const int lcModeHolder = myHolderMS->getInfluencer().getLaneChangeMode();
+    if (lcModeHolder != LCModeMRM) {
+        myPreviousLCMode = lcModeHolder;
+#ifdef DEBUG_TOC
+        std::cout << "MSDevice_ToC::setLCModeMRM() setting LC Mode of vehicle '" << myHolder.getID()
+                << "' from " << myPreviousLCMode << " to " << LCModeMRM << std::endl;
+#endif
+    }
+    myHolderMS->getInfluencer().setLaneChangeMode(LCModeMRM);
+}
+
+bool
+MSDevice_ToC::isManuallyDriven() {
+    return (myState == MANUAL || myState == RECOVERING);
+}
+
+bool
+MSDevice_ToC::isAutomated() {
+    return (myState == AUTOMATED || myState == PREPARING_TOC || myState == MRM);
+}
 
 /****************************************************************************/
 

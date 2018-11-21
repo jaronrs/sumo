@@ -1,0 +1,37 @@
+<a id="top"></a>
+
+						<div class="mw-indicators">
+</div>
+			<h1 id="firstHeading" class="firstHeading" lang="en">Contributed/SUMOPy/Simulation/Sublanes</h1>
+						<div id="bodyContent" class="mw-body-content">
+									<div id="siteSub">From Sumo</div>
+								<div id="contentSub"></div>
+												
+				<div id="mw-content-text" lang="en" dir="ltr" class="mw-content-ltr"><p>Sublanes is a new feature in SUMO since 2015. The simulation with Sublanes render traffic flows on roads more realistic. With sublanes, several vehicles can share side-by-side the same lane given there is enough room. For example a car can pass a bicycle on the same lane if the total lane width is larger than the bike width plus car width.
+</p><p>For sublane simulation with SUMOPy, simply browse to
+</p><p><code>scenario.demand.vtypes</code>
+</p><p>and set the lanechange model model to SL2015. Note that SUMOPy applies the same lanechange model to all vehicle types. Then run the simulation with
+</p><p><code>Simulation&gt;Sumo&gt;export routes and simulate...</code>
+</p><p>Note that on the SUMO dialog, the sublane width is now positive (1m by default). This value (which can be changed) determines how many sublanes can stay within one lane. For example a 3m wide lane can have 3 sublane of 1m but only 2 sublane of width 1.5m.
+</p><p>The lanechange behavior with sublanes can be tweaked for each vehicle type with the sublane parameters in <code>scenario.demand.vtypes</code>.
+</p>
+<!-- 
+NewPP limit report
+CPU time usage: 0.004 seconds
+Real time usage: 0.002 seconds
+Preprocessor visited node count: 1/1000000
+Preprocessor generated node count: 4/1000000
+Post‐expand include size: 0/2097152 bytes
+Template argument size: 0/2097152 bytes
+Highest expansion depth: 1/40
+Expensive parser function count: 0/100
+-->
+
+<!-- 
+Transclusion expansion time report (%,ms,calls,template)
+100.00%    0.000      1 - -total
+-->
+
+<!-- Saved in parser cache with key sumoSimWiki:pcache:idhash:888-0!*!*!*!*!*!* and timestamp 20181010222056 and revision id 10820
+ -->
+</div>									</div><hr/><div id="lastmod">This page was last modified on 20 May 2018, at 22:54.</div>

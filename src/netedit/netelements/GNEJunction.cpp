@@ -127,11 +127,6 @@ GNEJunction::rebuildGNECrossings(bool rebuildNBNodeCrossings) {
             // build new NBNode::Crossings and walking areas
             myNBNode.buildCrossingsAndWalkingAreas();
         }
-        // extract ALL crossing of Tree (Due after rebuild some IDs can referenciate another GNECrossing)
-        for (auto i : myGNECrossings) {
-            myNet->removeGLObjectFromGrid(i);
-        }
-
         // create a vector to keep retrieved and created crossings
         std::vector<GNECrossing*> retrievedCrossings;
         // iterate over NBNode::Crossings of GNEJunction
@@ -143,8 +138,6 @@ GNEJunction::rebuildGNECrossings(bool rebuildNBNodeCrossings) {
             std::vector<GNECrossing*>::iterator retrievedExists = std::find(myGNECrossings.begin(), myGNECrossings.end(), retrievedGNECrossing);
             if (retrievedExists != myGNECrossings.end()) {
                 myGNECrossings.erase(retrievedExists);
-                // insert retrieved crossing in tree again
-                myNet->addGLObjectIntoGrid(retrievedGNECrossing);
                 // update geometry of retrieved crossing
                 retrievedGNECrossing->updateGeometry(true);
             } else {
@@ -254,12 +247,14 @@ GNEJunction::drawGL(const GUIVisualizationSettings& s) const {
     double circleWidthSquared = circleWidth * circleWidth;
     int circleResolution = GNEAttributeCarrier::getCircleResolution(s);
     // push name
-    glPushName(getGlID());
     if (s.scale * exaggeration * myMaxSize < 1.) {
         // draw something simple so that selection still works
+        glPushName(getGlID());
         GLHelper::drawBoxLine(myNBNode.getPosition(), 0, 1, 1);
+        glPopName();
     } else {
         // node shape has been computed and is valid for drawing
+        glPushName(getGlID());
         const bool drawShape = myNBNode.getShape().size() > 0 && s.drawJunctionShape;
         const bool drawBubble = (((!drawShape || myNBNode.getShape().area() < 4)
                                   && s.drawJunctionShape)
@@ -319,16 +314,17 @@ GNEJunction::drawGL(const GUIVisualizationSettings& s) const {
             GUITexturesHelper::drawTexturedBox(GUITextureSubSys::getTexture(GNETEXTURE_TLS), -halfWidth, -halfHeight, halfWidth, halfHeight);
             glPopMatrix();
         }
-        // draw crossings
-        for (auto it : myGNECrossings) {
-            it->drawGL(s);
-        }
         // (optional) draw name @todo expose this setting if isn't drawed if isn't being drawn for selecting
         if (!s.drawForSelecting) {
             drawName(myNBNode.getPosition(), s.scale, s.junctionName);
         }
+        // name must be removed from selection stack before drawing crossings
+        glPopName();
+        // draw crossings
+        for (auto it : myGNECrossings) {
+            it->drawGL(s);
+        }
     }
-    glPopName();
 }
 
 Boundary
@@ -890,8 +886,6 @@ GNEJunction::retrieveGNECrossing(NBNode::Crossing* crossing, bool createIfNoExis
         GNECrossing* createdGNECrossing = new GNECrossing(this, crossing->edges);
         // show extra information for tests
         WRITE_DEBUG("Created " + createdGNECrossing->getTagStr() + " '" + createdGNECrossing->getID() + "' in retrieveGNECrossing()");
-        // insert it in Tree
-        myNet->addGLObjectIntoGrid(createdGNECrossing);
         // update geometry after creating
         createdGNECrossing->updateGeometry(true);
         return createdGNECrossing;

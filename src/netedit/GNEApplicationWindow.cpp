@@ -56,10 +56,12 @@
 #include <utils/gui/events/GUIEvent_Message.h>
 #include <utils/gui/images/GUIIconSubSys.h>
 #include <utils/gui/images/GUITextureSubSys.h>
+#include <utils/gui/cursors/GUICursorSubSys.h>
 #include <utils/gui/settings/GUICompleteSchemeStorage.h>
 #include <utils/gui/settings/GUISettingsHandler.h>
 #include <utils/gui/windows/GUIAppEnum.h>
 #include <utils/gui/windows/GUIDialog_Options.h>
+#include <utils/gui/windows/GUIPerspectiveChanger.h>
 #include <utils/options/OptionsCont.h>
 #include <utils/xml/XMLSubSys.h>
 
@@ -227,6 +229,8 @@ GNEApplicationWindow::GNEApplicationWindow(FXApp* a, const std::string& configPa
     GUIIconSubSys::initIcons(a);
     // init Textures
     GUITextureSubSys::initTextures(a);
+    // init cursors
+    GUICursorSubSys::initCursors(a);
 }
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -1333,6 +1337,13 @@ GNEApplicationWindow::onCmdOpenSUMOGUI(FXObject*, FXSelector, void*) {
     if (mySubWindows.empty()) {
         return 1;
     }
+    FXRegistry reg("SUMO GUI", "Eclipse");
+    reg.read();
+    const GUISUMOAbstractView* const v = getView();
+    reg.writeRealEntry("viewport", "x", v->getChanger().getXPos());
+    reg.writeRealEntry("viewport", "y", v->getChanger().getYPos());
+    reg.writeRealEntry("viewport", "z", v->getChanger().getZPos());
+    reg.write();
     std::string sumogui = "sumo-gui";
     const char* sumoPath = getenv("SUMO_HOME");
     if (sumoPath != nullptr) {
@@ -1341,7 +1352,7 @@ GNEApplicationWindow::onCmdOpenSUMOGUI(FXObject*, FXSelector, void*) {
             sumogui = "\"" + newPath + "\"";
         }
     }
-    std::string cmd = sumogui + " -n "  + OptionsCont::getOptions().getString("output-file");
+    std::string cmd = sumogui + " --registry-viewport" + " -n "  + OptionsCont::getOptions().getString("output-file");
     // start in background
 #ifndef WIN32
     cmd = cmd + " &";

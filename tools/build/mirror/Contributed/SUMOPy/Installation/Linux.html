@@ -1,0 +1,52 @@
+<a id="top"></a>
+
+						<div class="mw-indicators">
+</div>
+			<h1 id="firstHeading" class="firstHeading" lang="en">Contributed/SUMOPy/Installation/Linux</h1>
+						<div id="bodyContent" class="mw-body-content">
+									<div id="siteSub">From Sumo</div>
+								<div id="contentSub"></div>
+												
+				<div id="mw-content-text" lang="en" dir="ltr" class="mw-content-ltr"><p>Python 2.7 comes with most Linux operating systems. Python 3.x is not yet supported.
+All required additional packages are available in repositories:
+</p>
+<pre>python-numpy 
+python-wxgtk2.8  
+python-opengl 
+python-imaging 
+python-matplotlib 
+python-mpltoolkits.basemap </pre>
+<p>However, often Python 3.x is installed along the older version and may be the default Python interpreter. So make sure you run the sumopy scripts with Python 2.7
+</p><p>Another issue may that a newer version of  <code>python-wxgtk2.8</code> 
+has been included in the  repositories of more recent Linux distributions, 
+as for example Ubuntu-16.04. In this case, do the following safe operation to install <code>python-wxgtk2.8</code>:
+</p>
+<pre>echo &quot;deb http://archive.ubuntu.com/ubuntu wily main universe&quot;| sudo tee /etc/apt/sources.list.d/wily-copies.list
+
+sudo apt install python-wxgtk2.8
+
+sudo rm /etc/apt/sources.list.d/wily-copies.list
+
+sudo apt update
+</pre>
+
+<!-- 
+NewPP limit report
+CPU time usage: 0.004 seconds
+Real time usage: 0.003 seconds
+Preprocessor visited node count: 7/1000000
+Preprocessor generated node count: 44/1000000
+Post‐expand include size: 0/2097152 bytes
+Template argument size: 0/2097152 bytes
+Highest expansion depth: 2/40
+Expensive parser function count: 0/100
+-->
+
+<!-- 
+Transclusion expansion time report (%,ms,calls,template)
+100.00%    0.000      1 - -total
+-->
+
+<!-- Saved in parser cache with key sumoSimWiki:pcache:idhash:883-0!*!*!*!*!*!* and timestamp 20181010222056 and revision id 10812
+ -->
+</div>									</div><hr/><div id="lastmod">This page was last modified on 20 May 2018, at 22:21.</div>

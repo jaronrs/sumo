@@ -1,0 +1,84 @@
+<a id="top"></a>
+
+						<div class="mw-indicators">
+</div>
+			<h1 id="firstHeading" class="firstHeading" lang="en">Contributed/SUMOPy/Demand/Turn Flows</h1>
+						<div id="bodyContent" class="mw-body-content">
+									<div id="siteSub">From Sumo</div>
+								<div id="contentSub"></div>
+												
+				<div id="mw-content-text" lang="en" dir="ltr" class="mw-content-ltr"><p>Trip generation with turnflows allows to model traffic flows in a precise way, for simple, possibly loop-free networks with few internal traffic generation. The general idea is to generate trips and routes for individual vehicles based on road traffic counts. These traffic counts can be performed at junctions. Ideally, the traffic counts should be performed simultaneously at all relevant junctions. However, some edge flows can be derived from other edge flows considering flow preservation lows at nodes.
+</p><p>Basically two types of flows are needed in order to reconstruct the routes in a predefined study area:
+</p>
+<ul><li> The <i>generating flows</i> <span><i>FG[a]</i></span> on all edges <span><i>a</i></span> that <i>enter</i> the study area. <sup id="cite_ref-1" class="reference"><a href="#cite_note-1">[1]</a></sup></li>
+<li> The <i>turn flows</i> <span><i>FT[a1,a2]</i></span> for all flows between links <span><i>a1</i></span> and <span><i>a2</i></span> at nodes with more than one exiting edge.</li></ul>
+<p>The choice of traffic flows that need to be counted is illustrated by an example network:
+</p>
+<div class="center"><div class="floatnone"><a href="../../../images/Fig_demand_turnsflows_png.png" class="image" title="Example network to illustrate the use of turnflows for demand modeling."><img alt="Example network to illustrate the use of turnflows for demand modeling." src="../../../images/Fig_demand_turnsflows_png.png" width="450" height="465" srcset="/w/images/thumb/d/d2/Fig_demand_turnsflows_png.png/675px-Fig_demand_turnsflows_png.png 1.5x, /w/images/d/d2/Fig_demand_turnsflows_png.png 2x" /></a></div></div>
+<p>Neglecting all traffic generated within the study area, the following flows need to be counted:
+</p>
+<ul><li> The <i>generating flows</i> <span><i>FG[3], FG[12] </i></span> are entering the network.</li>
+<li> The <i>turn flows</i> <span><i>F[8,9], F[8,2] </i></span> at node <span><i>6</i></span> and <span><i>F[12,4], F[12,7] </i></span> at node <span><i>3</i></span>. All other nodes have only one exiting edge.</li></ul>
+<p>Once the necessary flows are counted for all considered transport modes and time intervals, the trips and routes of all vehicles 
+can be generated with a special router, called JTRouter. 
+</p><p>With SUMOPY the route generation with SUMOPY works as follows:
+First import flows and turnflows from a CSV file by selecting the menu item
+</p><p><code>Demand&gt;Turnflows&gt;Import turnflows</code>
+</p><p>The import turnflows dialog will pop up, as shown below.
+</p>
+<div class="center"><div class="floatnone"><a href="../../../images/Fig_sumopy_gui_turnflowwizard.png" class="image" title="Dialog for importing turnflow CSV files"><img alt="Dialog for importing turnflow CSV files" src="../../../images/Fig_sumopy_gui_turnflowwizard.png" width="600" height="478" srcset="/w/images/2/2f/Fig_sumopy_gui_turnflowwizard.png 1.5x, /w/images/2/2f/Fig_sumopy_gui_turnflowwizard.png 2x" /></a></div></div>
+<p>This dialog is similar to the OD-flow wizard explained in Sec. <a href="#Zone_to_zone_demand_flows">#Zone to zone demand flows</a> and allows to import traffic counts, and associate them with a time interval and a transport mode.
+</p><p>The <code> Turnflow File</code> to be imported contains the traffic counts of both flow types, generating flows and turnflows. The turnflow file has the following format:
+</p>
+<pre>&lt;ID1&gt;, &lt;count 1&gt;, &lt;ID11&gt;, &lt;count 11&gt;,  &lt;ID12&gt;, &lt;count 12&gt;, ...
+&lt;ID2&gt;, &lt;count 2&gt;, &lt;ID21&gt;, &lt;count 21&gt;,  &lt;ID22&gt;, &lt;count 22&gt;, ...
+...</pre>
+<p>This notation has the following meaning:
+</p><p><code>&lt;IDa&gt;</code> means the SUMO edge ID of edge  <span><i>a</i></span>, where edge  <span><i>a</i></span> is the edge entering a node.
+</p><p><code>&lt;IDab&gt;</code> means the SUMO edge ID of edge  <span><i>ab</i></span>, where edge  <span><i>ab</i></span> is the edge outgoing from the node which edge  <span><i>a</i></span> enters.
+</p><p><code>&lt;count a&gt;</code> means the number of vehicles leaving edge <span><i>a</i></span>, in case the edge is generating flows, otherwise this count is zero.
+</p><p><code>&lt;count ab&gt;</code> means the number of vehicles from edge <span><i>a</i></span> turning into edge <span><i>b</i></span>.
+</p><p>All counts in this file refer to the mode and time interval specified in the dialog box.
+</p><p>The turnflow file for the example network shown <a href="/w/index.php?title=File:Fig_demand_turnsflows.png&amp;action=edit&amp;redlink=1" class="new" title="File:Fig demand turnsflows.png (page does not exist)">above</a>, could look like this:
+</p>
+<pre>3, 1000
+12, 800, 4, 200, 7, 600
+8, 0, 9, 800, 2, 400</pre>
+<p>In this case, the generating flows <span><i>FG[3]=1000, F[12]=800 </i></span> and the turn flows <span><i>FT[8,9] = 800, FT[8,2] = 400 </i></span> and <span><i>FT[12,4] = 200, FT[12,7] = 500</i></span> for a specific mode and time interval.
+</p><p><i>Hint:</i> In order to quickly compile the turnflow file, open a text editor and the SUMOPy window next to each other. In the SUMOPy network editor, deselect lanes, connections and crossings by clicking on the button next to the zoom buttons below the network canvas. Then select the info tool (if not already active) and click on the edges you consider for the turnflow file. The respective edge will be highlighted and you can see all edge attributes in the object browser, as shown below:
+</p>
+<div class="center"><div class="floatnone"><a href="../../../images/Fig_sumopy_gui_edgeid.png" class="image"><img alt="Fig sumopy gui edgeid.png" src="../../../images/Fig_sumopy_gui_edgeid.png" width="400" height="657" srcset="/w/images/7/70/Fig_sumopy_gui_edgeid.png 1.5x, /w/images/7/70/Fig_sumopy_gui_edgeid.png 2x" /></a></div></div>
+<p>From there, copy the SUMO edge ID and paste it into your turnflow text file.
+</p><p>Optionally define destination zones: Within the turnflow demand model destination zones define edges where vehicle routes end. This may be necessary in order to prevent vehicles of making a loop on the network outside the study area and re-entering the study area. Destination zones for turnflows are created in the same way as Traffic assignment Zones in section <a href="#Zone_to_zone_demand_flows">#Zone to zone demand flows</a>.
+</p><p>Generate directly route from flows and turn-flows information by selecting menu item
+</p><p><code>Demand&gt;Turnflows&gt;Turnflows to routes</code>
+</p><p>This process is using SUMO’s JTROUTER and will generate both trips and routes. The scenario is now ready to be simulated by selecting
+</p><p><code>Simulation&gt;Sumo&gt;export routes and simulate...</code>
+</p><p>Proceed as described in Sec. <a href="#Simulating_the_scenario">#Simulating the scenario</a>.
+</p><p>A test file for turnflows is located in
+</p>
+<code>SUMOHOME/tools/contributed/sumopy/testscenario/demo_dem_tf_car.csv</code><ol class="references">
+<li id="cite_note-1"><span class="mw-cite-backlink"><a href="#cite_ref-1">↑</a></span> <span class="reference-text">In addition, traffic flows can also be generated on edges within the study area, but in practice it is difficult to measure those flows because one would need to spot and count only departing vehicles along the roads of the study area. However, for some particular edges with many departing vehicles this may be necessary to do.</span>
+</li>
+</ol>
+
+<!-- 
+NewPP limit report
+CPU time usage: 0.040 seconds
+Real time usage: 0.042 seconds
+Preprocessor visited node count: 23/1000000
+Preprocessor generated node count: 122/1000000
+Post‐expand include size: 0/2097152 bytes
+Template argument size: 0/2097152 bytes
+Highest expansion depth: 3/40
+Expensive parser function count: 0/100
+-->
+
+<!-- 
+Transclusion expansion time report (%,ms,calls,template)
+100.00%    0.000      1 - -total
+-->
+
+<!-- Saved in parser cache with key sumoSimWiki:pcache:idhash:887-0!*!0!*!*!5!* and timestamp 20181010222055 and revision id 10819
+ -->
+</div>									</div><hr/><div id="lastmod">This page was last modified on 20 May 2018, at 22:51.</div>

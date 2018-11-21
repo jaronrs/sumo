@@ -1,0 +1,138 @@
+<a id="top"></a>
+
+						<div class="mw-indicators">
+</div>
+			<h1 id="firstHeading" class="firstHeading" lang="en">Developer/HowToRelease</h1>
+						<div id="bodyContent" class="mw-body-content">
+									<div id="siteSub">From Sumo</div>
+								<div id="contentSub"></div>
+												
+				<div id="mw-content-text" lang="en" dir="ltr" class="mw-content-ltr"><div id="toc" class="toc"><div id="toctitle"><h2>Contents</h2></div>
+<ul>
+<li class="toclevel-1 tocsection-1"><a href="#Packages"><span class="tocnumber">1</span> <span class="toctext">Packages</span></a></li>
+<li class="toclevel-1 tocsection-2"><a href="#Release_steps"><span class="tocnumber">2</span> <span class="toctext">Release steps</span></a>
+<ul>
+<li class="toclevel-2 tocsection-3"><a href="#Merge_phase"><span class="tocnumber">2.1</span> <span class="toctext">Merge phase</span></a></li>
+<li class="toclevel-2 tocsection-4"><a href="#Freeze_phase_.28Release_day_-_7.29"><span class="tocnumber">2.2</span> <span class="toctext">Freeze phase (Release day - 7)</span></a></li>
+<li class="toclevel-2 tocsection-5"><a href="#Release_day_-_1"><span class="tocnumber">2.3</span> <span class="toctext">Release day - 1</span></a></li>
+<li class="toclevel-2 tocsection-6"><a href="#Release_day"><span class="tocnumber">2.4</span> <span class="toctext">Release day</span></a></li>
+<li class="toclevel-2 tocsection-7"><a href="#After-release_cleanup"><span class="tocnumber">2.5</span> <span class="toctext">After-release cleanup</span></a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+<h2><span class="mw-headline" id="Packages">Packages</span></h2>
+<p>for an overview of created packages and contents see <a href="../Downloads.html" title="Downloads">Downloads</a>.
+</p>
+<h2><span class="mw-headline" id="Release_steps">Release steps</span></h2>
+<p>Below, a list of steps that should be done in order to publish a new release is given. All necessary commits which have no ticket of their own may refer to <a rel="nofollow" class="external text" href="https://github.com/eclipse/sumo/issues/563">Issue #563</a>.
+</p>
+<h3><span class="mw-headline" id="Merge_phase">Merge phase</span></h3>
+<p>Major changes to the SUMO trunk should end about two weeks before the release data. This refers especially to merges of project branches into the trunk. It is also a good idea to inform the developers of dependent software (traci4j, Veins, VSimRTI, TraaS, SUMOPy etc.) at this stage.
+</p>
+<h3><span class="mw-headline" id="Freeze_phase_.28Release_day_-_7.29">Freeze phase (Release day - 7)</span></h3>
+<ul><li> check the sources
+<ul><li> compile, try to remove warnings and commit the patches</li>
+<li> run <a href="../Developer/CodeStyle.html" title="Developer/CodeStyle">AStyle</a> and commit changed files</li>
+<li> check the calendar to update copyright statements</li>
+<li> check whether the TraCI version <a href="../TraCI/Control-related_commands.html#Response_0x00:_Version" title="TraCI/Control-related commands">needs to be incremented</a> and rebuild TraCI constants in python (tools/traci/rebuildConstants.py)</li>
+<li> check whether the network version needs to be incremented and update the value in NWFrame::MAJOR_VERSION. Netconvert tests need to be updated afterwards.</li>
+<li> update author information</li></ul></li>
+<li> check the regular tests
+<ul><li> put special attention to the tests which serve as examples, see tests/examples.txt!</li>
+<li> Win64 and gcc4_64 should have no failing tests, the other platforms are less important</li>
+<li> If there are failing tests, which are not flagged as known bugs, save them after careful checking or open a ticket and assign a known bug.</li>
+<li> recheck/rebuild the test networks (if necessary due to netconvert changes)</li>
+<li> check the tests again</li></ul></li>
+<li> check the documentation
+<ul><li> update the <a href="../ChangeLog.html" title="ChangeLog">change log</a></li>
+<li> generate options documentation from configuration templates using configTemplateToWiki.py (for instance <code>tools/build/configTemplateToWiki.py activitygen | xclip</code> which copies it directly to the clipboard)</li>
+<li> recheck/rebuild the configuration schemata (if options were added) using tools/xml/rebuildSchemata.py (use the internal build to include all options)</li></ul></li>
+<li> check the internal tests (same procedure as above), especially the (to be) published scenarios</li>
+<li> GitHub
+<ul><li> add new <a rel="nofollow" class="external text" href="https://github.com/DLR-TS/sumo/milestones">milestone</a> if necessary</li>
+<li> check all remaining tickets and assign them to later milestones or to persons.</li></ul></li>
+<li> scenarios (optional)
+<ul><li> prepare scenarios for release if the previous version does not run with the current release or significant changes were made to the scenarios</li></ul></li>
+<li> update submodules by running <code>git submodule update</code> and committing the changes if necessary</li></ul>
+<p>The trunk is now frozen. All commits which do not refer to an open ticket for the upcoming release need to be made to a separate branch.
+The freeze phase should not last longer than one week. The goal is to fix all scenarios and have all failing tests fixed, which are not assigned to a later milestone.
+</p>
+<h3><span class="mw-headline" id="Release_day_-_1">Release day - 1</span></h3>
+<p>All scenarios should be fixed by now.
+</p>
+<ul><li> patch the version information
+<ul><li> in windows_config.h, also disable the HAVE_VERSION_H macro</li>
+<li> in configure.ac and build/wix/sumo.wxs</li>
+<li> commit the changes</li></ul></li>
+<li> recheck whether submodules changed by doing <code>git submodule update</code> and committing the changes after careful inspection</li>
+<li> check the documentation
+<ul><li> update the <a href="../ChangeLog.html" title="ChangeLog">change log</a> again and include version and release date</li>
+<li> modify the <a href="../Template:Version.html" title="Template:Version">version template</a> and the <a href="../Template:ReleaseDate.html" title="Template:ReleaseDate">release date</a> to update <a href="../Downloads.html" title="Downloads">download links</a> and .</li></ul></li></ul>
+<h3><span class="mw-headline" id="Release_day">Release day</span></h3>
+<p>The nightly build should have generated all releasable packages. If not, delay the release.
+(The complete documentation, tests and source distribution build can be achieved via "make dist-complete".)
+The following things need to be there:
+</p>
+<ul><li> the platform independent part of the distribution; 
+<ul><li> source distributions (.tar.gz, .zip) ("make dist", rename)</li>
+<li> tests distributions (.tar.gz) ("make dist-tests")</li>
+<li> docs distributions (.tar.gz) ("make dist-doc")</li></ul></li>
+<li> the binary part of the distribution
+<ul><li> windows binary distribution (zip, includes docs)</li>
+<li> windows installer (msi, Win32 and x64, includes docs)</li>
+<li> check presence of RPMs on <a rel="nofollow" class="external free" href="https://build.opensuse.org/package/show/home:behrisch/sumo">https://build.opensuse.org/package/show/home:behrisch/sumo</a></li></ul></li></ul>
+<p>If everything is fine:
+</p>
+<ul><li> make a new folder in O:\Daten\Sumo\Releases</li>
+<li> make new sourceforge-release
+<ul><li> make a new release within the sumo package (named "version x.y.z")</li>
+<li> add files to the release</li>
+<li> change default download attributes</li>
+<li> update files at the <a rel="nofollow" class="external text" href="https://build.opensuse.org/package/show?package=sumo&amp;project=home%3Abehrisch">opensuse build service</a></li></ul></li>
+<li> scenarios (optional)
+<ul><li> add files to <a rel="nofollow" class="external text" href="https://sourceforge.net/projects/sumo/files/traffic_data/scenarios/">the scenario folder</a></li>
+<li> updated README.txt </li></ul></li>
+<li> <strike>unpack the doc.tar.gz into the "doc" folder on the web space</strike>
+<ul><li> <strike>change the current link for the docs</strike></li></ul></li>
+<li> inform the users about the new release
+<ul><li> post information about the release to sumo-user@eclipse.org and sumo-announce@eclipse.org</li>
+<li> <strike>post information about the release to news</strike></li>
+<li> <strike>post information into the <a rel="nofollow" class="external text" href="http://sumo-sim.org/blog">blog</a></strike></li>
+<li> trigger update of main website at <a rel="nofollow" class="external free" href="http://sumo.dlr.de">http://sumo.dlr.de</a></li></ul></li>
+<li> add a new version tag</li></ul>
+<pre>&gt; git tag -a v0_13_7 -m "tagging release 0.13.7, refs #563"
+&gt; git push --tags
+</pre>
+<ul><li> close <a rel="nofollow" class="external text" href="https://github.com/DLR-TS/sumo/milestones">the milestone</a> (retargeting open tickets needs to be done manually for now)</li></ul>
+<h3><span class="mw-headline" id="After-release_cleanup">After-release cleanup</span></h3>
+<p>The trunk is now open for changes again.
+</p>
+<ul><li> reenable HAVE_VERSION_H in windows_config.h</li>
+<li> rename version to "git" in configure.ac</li>
+<li> insert a new empty "Git master" section at the top of the <a href="../ChangeLog.html" title="ChangeLog">change log</a></li>
+<li> commit changes</li>
+<li> drink your favorite beverage</li></ul>
+
+<!-- 
+NewPP limit report
+CPU time usage: 0.020 seconds
+Real time usage: 0.021 seconds
+Preprocessor visited node count: 33/1000000
+Preprocessor generated node count: 60/1000000
+Post‐expand include size: 55/2097152 bytes
+Template argument size: 6/2097152 bytes
+Highest expansion depth: 2/40
+Expensive parser function count: 0/100
+-->
+
+<!-- 
+Transclusion expansion time report (%,ms,calls,template)
+100.00%    2.286      1 - -total
+100.00%    2.286      1 - Template:Ticket
+-->
+
+<!-- Saved in parser cache with key sumoSimWiki:pcache:idhash:15-0!*!0!!en!*!* and timestamp 20181010222103 and revision id 11303
+ -->
+</div>									</div><hr/><div id="lastmod">This page was last modified on 18 September 2018, at 08:57.</div>

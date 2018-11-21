@@ -1,0 +1,2 @@
+/usr/bin/ar cq libforeign_eulerspiral.a  CMakeFiles/foreign_eulerspiral.dir/odrSpiral.cpp.o
+/usr/bin/ranlib libforeign_eulerspiral.a
