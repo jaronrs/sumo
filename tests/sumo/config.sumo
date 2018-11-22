@@ -93,6 +93,7 @@ output:--python-script
 output:--osg-view{LINES 2}
 output:movereminder-output{LINES 2}
 output:Simulation.*started with{REPLACE Simulation started with}
+output:Average cost of a timing call
 calibrator_log:<!--{[->]}-->
 detector:<!--{[->]}-->
 detector2:<!--{[->]}-->
