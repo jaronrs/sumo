@@ -311,13 +311,11 @@ GNEEdge::moveVertexShape(const int index, const Position& oldPos, const Position
     if (index != -1) {
         // check that index is correct before change position
         if (index < (int)edgeGeometry.size()) {
-            // save Z value
-            double zValue = edgeGeometry[index].z();
-            // change position of vertex (only X-Y)
+            // change position of vertex
             edgeGeometry[index] = oldPos;
             edgeGeometry[index].add(offset);
-            // restore Z value
-            edgeGeometry[index].setz(zValue);
+            // filtern position using snap to active grid
+            edgeGeometry[index] = myNet->getViewNet()->snapToActiveGrid(edgeGeometry[index]);
             // update edge's geometry without updating RTree (To avoid unnecesary changes in RTree)
             setGeometry(edgeGeometry, true, false);
             return index;
@@ -496,7 +494,7 @@ GNEEdge::drawGL(const GUIVisualizationSettings& s) const {
             // draw geometry points expect initial and final
             for (int i = 1; i < (int)myNBEdge.getGeometry().size() - 1; i++) {
                 Position pos = myNBEdge.getGeometry()[i];
-                if (!s.drawForSelecting || (myNet->getViewNet()->getPositionInformation().distanceSquaredTo(pos) <= (circleWidthSquared + 2))) {
+                if (!s.drawForSelecting || (myNet->getViewNet()->getPositionInformation().distanceSquaredTo2D(pos) <= (circleWidthSquared + 2))) {
                     glPushMatrix();
                     glTranslated(pos.x(), pos.y(), GLO_JUNCTION - 0.01);
                     // resolution of drawn circle depending of the zoom (To improve smothness)
@@ -507,7 +505,7 @@ GNEEdge::drawGL(const GUIVisualizationSettings& s) const {
             // draw line geometry, start and end points if shapeStart or shape end is edited, and depending of drawForSelecting
             if (myNet->getViewNet()->getCurrentEditMode() == GNE_MODE_MOVE) {
                 if ((myNBEdge.getGeometry().front() != myGNEJunctionSource->getPositionInView()) &&
-                        (!s.drawForSelecting || (myNet->getViewNet()->getPositionInformation().distanceSquaredTo(myNBEdge.getGeometry().front()) <= (circleWidthSquared + 2)))) {
+                        (!s.drawForSelecting || (myNet->getViewNet()->getPositionInformation().distanceSquaredTo2D(myNBEdge.getGeometry().front()) <= (circleWidthSquared + 2)))) {
                     glPushMatrix();
                     glTranslated(myNBEdge.getGeometry().front().x(), myNBEdge.getGeometry().front().y(), GLO_JUNCTION + 0.01);
                     // resolution of drawn circle depending of the zoom (To improve smothness)
@@ -530,7 +528,7 @@ GNEEdge::drawGL(const GUIVisualizationSettings& s) const {
                     }
                 }
                 if ((myNBEdge.getGeometry().back() != myGNEJunctionDestiny->getPositionInView()) &&
-                        (!s.drawForSelecting || (myNet->getViewNet()->getPositionInformation().distanceSquaredTo(myNBEdge.getGeometry().back()) <= (circleWidthSquared + 2)))) {
+                        (!s.drawForSelecting || (myNet->getViewNet()->getPositionInformation().distanceSquaredTo2D(myNBEdge.getGeometry().back()) <= (circleWidthSquared + 2)))) {
                     glPushMatrix();
                     glTranslated(myNBEdge.getGeometry().back().x(), myNBEdge.getGeometry().back().y(), GLO_JUNCTION + 0.01);
                     // resolution of drawn circle depending of the zoom (To improve smothness)
@@ -560,7 +558,7 @@ GNEEdge::drawGL(const GUIVisualizationSettings& s) const {
 
     // (optionally) draw the name and/or the street name if isn't being drawn for selecting
     const bool drawStreetName = s.streetName.show && (myNBEdge.getStreetName() != "");
-    if (!s.drawForSelecting && (s.edgeName.show || drawStreetName)) {
+    if (!s.drawForSelecting && (s.edgeName.show || drawStreetName || s.edgeValue.show)) {
         glPushName(getGlID());
         GNELane* lane1 = myLanes[0];
         GNELane* lane2 = myLanes[myLanes.size() - 1];
@@ -578,6 +576,11 @@ GNEEdge::drawGL(const GUIVisualizationSettings& s) const {
         if (drawStreetName) {
             GLHelper::drawText(myNBEdge.getStreetName(), p, GLO_MAX,
                                s.streetName.scaledSize(s.scale), s.streetName.color, angle);
+        }
+        if (s.edgeValue.show) {
+            double value = lane2->getColorValue(s, s.laneColorer.getActive());
+            GLHelper::drawText(toString(value), p, GLO_MAX,
+                    s.edgeValue.scaledSize(s.scale), s.edgeValue.color, angle);
         }
         glPopName();
     }

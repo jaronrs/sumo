@@ -56,7 +56,7 @@ endif ()
 # special debug flags
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -stdlib=libstdc++ -fsanitize=undefined,address,integer,unsigned-integer-overflow -fno-omit-frame-pointer -fsanitize-blacklist=${CMAKE_SOURCE_DIR}/build/clang_sanitize_blacklist.txt")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -stdlib=libstdc++ -fsanitize=undefined,address,integer,unsigned-integer-overflow -fno-omit-frame-pointer -fsanitize-blacklist=${CMAKE_SOURCE_DIR}/build/clang_sanitize_blacklist.txt")
 endif ()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
@@ -117,6 +117,9 @@ endif ()
 
 # Check if libraries have to be found, depending on SUMO_LIBRARIES
 set(SUMO_LIBRARIES "$ENV{SUMO_LIBRARIES}" CACHE PATH "Location of SUMOLibraries dependencies")
+if (NOT SUMO_LIBRARIES AND EXISTS "${CMAKE_SOURCE_DIR}/../SUMOLibraries")
+    set(SUMO_LIBRARIES "${CMAKE_SOURCE_DIR}/../SUMOLibraries")
+endif ()
 if (SUMO_LIBRARIES)
     # Special option for MinGW32
     if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND WIN32)
@@ -142,7 +145,13 @@ if (SUMO_LIBRARIES)
     file(GLOB PROJ_PATH "${SUMO_LIBRARIES}/proj_gdal-????${LIB_VERSION}")
     file(GLOB FOX_PATH "${SUMO_LIBRARIES}/fox-1.6.??${LIB_VERSION}")
     set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${XERCES_PATH};${PROJ_PATH};${FOX_PATH}")
-    file(GLOB SUMO_LIBRARIES_DLL "${XERCES_PATH}/bin/*.dll" "${PROJ_PATH}/bin/*.dll" "${FOX_PATH}/lib/*.dll")
+    file(GLOB SUMO_LIBRARIES_DLL "${XERCES_PATH}/bin/*.dll"
+                                 "${PROJ_PATH}/bin/*.dll"
+                                 "${FOX_PATH}/lib/*.dll"
+                                 "${SUMO_LIBRARIES}/3rdPartyLibs/bzip2-?.?.?${LIB_VERSION}/*.dll"
+                                 "${SUMO_LIBRARIES}/3rdPartyLibs/libpng-?.?.??${LIB_VERSION}/*/*.dll"
+                                 "${SUMO_LIBRARIES}/3rdPartyLibs/tiff-?.?.?${LIB_VERSION}/libtiff/*/*.dll"
+                                 "${SUMO_LIBRARIES}/3rdPartyLibs/zlib-?.?.??${LIB_VERSION}/*/*.dll")
     # set GoogleTest only if compiler isn't mingw32
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND WIN32)
         if(USE_MINGW_64BITS)
@@ -161,8 +170,8 @@ if (SUMO_LIBRARIES)
     file(GLOB OSG_PATH "${SUMO_LIBRARIES}/OSG-?.?.?${LIB_VERSION}")
     file(GLOB GL2PS_PATH "${SUMO_LIBRARIES}/gl2ps-?.?.?${LIB_VERSION}")
     set(CMAKE_LIBRARY_PATH "${CMAKE_LIBRARY_PATH};${GL2PS_PATH}/Release")
-    set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${FFMPEG_PATH};${OSG_PATH};${GL2PS_PATH}")
-    file(GLOB SUMO_OPTIONAL_LIBRARIES_DLL "${FFMPEG_PATH}/bin/*.dll" "${OSG_PATH}/bin/*.dll" "${GL2PS_PATH}/Release/*.dll")
+    set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${FFMPEG_PATH};${GL2PS_PATH}")
+    file(GLOB SUMO_OPTIONAL_LIBRARIES_DLL "${FFMPEG_PATH}/bin/*.dll" "${GL2PS_PATH}/Release/*.dll")
     # set SWIG
     set(SWIG_EXECUTABLE "${SUMO_LIBRARIES}/swigwin-3.0.12/swig.exe")
     # set GRPC
@@ -252,7 +261,7 @@ if (CHECK_OPTIONAL_LIBS)
             set(ENABLED_FEATURES "${ENABLED_FEATURES} GRPC")
         endif (GRPC_FOUND AND Protobuf_FOUND)
     endif()
-    set(SUMO_LIBRARIES_DLL "${SUMO_LIBRARIES_DLL} ${SUMO_OPTIONAL_LIBRARIES_DLL}")
+    set(SUMO_LIBRARIES_DLL "${SUMO_LIBRARIES_DLL};${SUMO_OPTIONAL_LIBRARIES_DLL}")
 endif (CHECK_OPTIONAL_LIBS)
 
 include_directories(${CMAKE_BINARY_DIR}/src)
@@ -293,11 +302,14 @@ install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/t
 install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/build/setup-traci.py clean --all install --prefix $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX})"
         COMPONENT pytraci)
 
+string(REPLACE "${SUMO_LIBRARIES}" "" SUMO_LIBRARIES_DLL "${SUMO_LIBRARIES_DLL}")
 add_custom_target(install_dll)
-foreach(LIB_DLL ${SUMO_LIBRARIES_DLL})
-  add_custom_command(TARGET install_dll PRE_BUILD
-                     COMMAND ${CMAKE_COMMAND} -E copy ${LIB_DLL} ${CMAKE_SOURCE_DIR}/bin)
-endforeach()
+add_custom_command(TARGET install_dll PRE_BUILD
+                   COMMAND ${PYTHON_EXECUTABLE} -c "import shutil;[shutil.copy('${SUMO_LIBRARIES}'+l, '${CMAKE_SOURCE_DIR}/bin') for l in '${SUMO_LIBRARIES_DLL}'.split(';')]")
+if (HAVE_OSG)
+    add_custom_command(TARGET install_dll PRE_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E copy_directory ${OSG_PATH}/bin ${CMAKE_SOURCE_DIR}/bin)
+endif ()
 set_property(TARGET install_dll PROPERTY EXCLUDE_FROM_DEFAULT_BUILD TRUE)
 set_property(TARGET install_dll PROPERTY FOLDER "CMake")
 
@@ -389,7 +401,7 @@ if (GIT_FOUND)
     set_property(TARGET dist PROPERTY FOLDER "CMake")
     set_property(TARGET dist PROPERTY EXCLUDE_FROM_DEFAULT_BUILD TRUE)
     # alias for backward compatibility
-	add_custom_target(dist-complete DEPENDS dist)
+    add_custom_target(dist-complete DEPENDS dist)
     set_property(TARGET dist-complete PROPERTY FOLDER "CMake")
     set_property(TARGET dist-complete PROPERTY EXCLUDE_FROM_DEFAULT_BUILD TRUE)
 
@@ -432,4 +444,3 @@ if (MVN_EXECUTABLE AND ANT_EXECUTABLE)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endif()
 message(STATUS "Enabled features: ${ENABLED_FEATURES}")
-

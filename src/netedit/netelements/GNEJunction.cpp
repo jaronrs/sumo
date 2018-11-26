@@ -291,7 +291,7 @@ GNEJunction::drawGL(const GUIVisualizationSettings& s) const {
             if (color[3] != 0) {
                 glPushMatrix();
                 glTranslated(myNBNode.getPosition().x(), myNBNode.getPosition().y(), getType() + 0.05);
-                if (!s.drawForSelecting || (myNet->getViewNet()->getPositionInformation().distanceSquaredTo(myNBNode.getPosition()) <= (circleWidthSquared + 2))) {
+                if (!s.drawForSelecting || (myNet->getViewNet()->getPositionInformation().distanceSquaredTo2D(myNBNode.getPosition()) <= (circleWidthSquared + 2))) {
                     std::vector<Position> vertices = GLHelper::drawFilledCircleReturnVertices(circleWidth, circleResolution);
                     // check if dotted contour has to be drawn
                     if (!s.drawForSelecting && myNet->getViewNet()->getACUnderCursor() == this) {
@@ -317,6 +317,17 @@ GNEJunction::drawGL(const GUIVisualizationSettings& s) const {
         // (optional) draw name @todo expose this setting if isn't drawed if isn't being drawn for selecting
         if (!s.drawForSelecting) {
             drawName(myNBNode.getPosition(), s.scale, s.junctionName);
+        }
+        // draw elevation
+        if (!s.drawForSelecting && myNet->getViewNet()->editingElevation()) {
+            // Push matrix
+            glPushMatrix();
+            // Traslate to center of detector
+            glTranslated(myNBNode.getPosition().x(), myNBNode.getPosition().y(), getType() + 1);
+            // draw Z
+            GLHelper::drawText(toString(myNBNode.getPosition().z()), Position(), .1, 2, RGBColor::BLUE);
+            // pop matrix
+            glPopMatrix();
         }
         // name must be removed from selection stack before drawing crossings
         glPopName();
@@ -567,6 +578,9 @@ GNEJunction::moveGeometry(const Position& oldPos, const Position& offset) {
     if (!abort) {
         Position newPosition = oldPos;
         newPosition.add(offset);
+        // filtern position using snap to active grid
+        // filtern position using snap to active grid
+        newPosition = myNet->getViewNet()->snapToActiveGrid(newPosition);
         moveJunctionGeometry(newPosition, false);
     }
 }
@@ -945,6 +959,8 @@ GNEJunction::getAttribute(SumoXMLAttr key) const {
                 }
                 return toString(false);
             }
+        case SUMO_ATTR_RIGHT_OF_WAY:
+            return SUMOXMLDefinitions::RightOfWayValues.getString(myNBNode.getRightOfWay());
         case GNE_ATTR_SELECTED:
             return toString(isAttributeCarrierSelected());
         case GNE_ATTR_GENERIC:
@@ -967,6 +983,7 @@ GNEJunction::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoList
         case SUMO_ATTR_SHAPE:
         case SUMO_ATTR_RADIUS:
         case SUMO_ATTR_TLTYPE:
+        case SUMO_ATTR_RIGHT_OF_WAY:
         case GNE_ATTR_SELECTED:
         case GNE_ATTR_GENERIC:
             undoList->add(new GNEChange_Attribute(this, key, value), true);
@@ -1101,6 +1118,8 @@ GNEJunction::isValid(SumoXMLAttr key, const std::string& value) {
             return myNBNode.isTLControlled() && (value != "");
         case SUMO_ATTR_KEEP_CLEAR:
             return canParse<bool>(value);
+        case SUMO_ATTR_RIGHT_OF_WAY:
+            return SUMOXMLDefinitions::RightOfWayValues.hasString(value);
         case GNE_ATTR_SELECTED:
             return canParse<bool>(value);
         case GNE_ATTR_GENERIC:
@@ -1222,6 +1241,9 @@ GNEJunction::setAttribute(SumoXMLAttr key, const std::string& value) {
             myNBNode.setKeepClear(parse<bool>(value));
             break;
         }
+        case SUMO_ATTR_RIGHT_OF_WAY:
+            myNBNode.setRightOfWay(SUMOXMLDefinitions::RightOfWayValues.get(value));
+            break;
         case GNE_ATTR_SELECTED:
             if (parse<bool>(value)) {
                 selectAttributeCarrier();
@@ -1258,7 +1280,7 @@ GNEJunction::mouseOverObject(const GUIVisualizationSettings& s) const {
         double circleWidthSquared = circleWidth * circleWidth;
         if (drawBubble) {
             // check if cursor is whithin the circle
-            if (myNet->getViewNet()->getPositionInformation().distanceSquaredTo(myNBNode.getPosition()) <= circleWidthSquared) {
+            if (myNet->getViewNet()->getPositionInformation().distanceSquaredTo2D(myNBNode.getPosition()) <= circleWidthSquared) {
                 myNet->getViewNet()->setACUnderCursor(this);
             }
         } else if (drawShape) {

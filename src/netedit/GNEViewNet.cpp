@@ -99,6 +99,7 @@ FXDEFMAP(GNEViewNet) GNEViewNetMap[] = {
     FXMAPFUNC(SEL_COMMAND, MID_GNE_VIEWNET_SHOW_CONNECTIONS,        GNEViewNet::onCmdToogleShowConnection),
     FXMAPFUNC(SEL_COMMAND, MID_GNE_VIEWNET_SELECT_EDGES,            GNEViewNet::onCmdToogleSelectEdges),
     FXMAPFUNC(SEL_COMMAND, MID_GNE_VIEWNET_SHOW_BUBBLES,            GNEViewNet::onCmdToogleShowBubbles),
+    FXMAPFUNC(SEL_COMMAND, MID_GNE_VIEWNET_MOVE_ELEVATION,          GNEViewNet::onCmdToogleMoveElevation),
     FXMAPFUNC(SEL_COMMAND, MID_GNE_VIEWNET_SHOW_GRID,               GNEViewNet::onCmdShowGrid),
     // select elements
     FXMAPFUNC(SEL_COMMAND, MID_ADDSELECT,                           GNEViewNet::onCmdAddSelected),
@@ -502,7 +503,7 @@ GNEViewNet::GNEViewNet(FXComposite* tmpParent, FXComposite* actualParent, GUIMai
     myShowConnections(false),
     mySelectEdges(true),
     myShiftKeyPressed(false),
-    myCreateEdgeSource(nullptr),
+    myMoveMultipleElementValues(this), 
     myToolbar(toolBar),
     myEditModeCreateEdge(nullptr),
     myEditModeMove(nullptr),
@@ -515,10 +516,9 @@ GNEViewNet::GNEViewNet(FXComposite* tmpParent, FXComposite* actualParent, GUIMai
     myEditModeCrossing(nullptr),
     myEditModePolygon(nullptr),
     myEditModeProhibition(nullptr),
-    myEditModeNames(),
     myUndoList(undoList),
-    myEditShapePoly(nullptr),
-    myMoveMultipleElementValues(this) {
+    myEditShapePoly(nullptr)
+{
     // view must be the final member of actualParent
     reparent(actualParent);
 
@@ -744,8 +744,18 @@ GNEViewNet::setStatusBarText(const std::string& text) {
 
 
 bool
-GNEViewNet::selectEdges() {
+GNEViewNet::selectEdges() const {
     return mySelectEdges;
+}
+
+
+bool 
+GNEViewNet::editingElevation() const {
+    if (myCreateEdgeValues.menuCheckMoveElevation->shown()) {
+        return (myCreateEdgeValues.menuCheckMoveElevation->getCheck() == TRUE);
+    } else {
+        return false;
+    }
 }
 
 
@@ -783,7 +793,7 @@ GNEViewNet::changeAllPhases() const {
 
 bool
 GNEViewNet::showJunctionAsBubbles() const {
-    return (myEditMode == GNE_MODE_MOVE) && (myMenuCheckShowBubbleOverJunction->getCheck());
+    return (myEditMode == GNE_MODE_MOVE) && (myCreateEdgeValues.menuCheckShowBubbleOverJunction->getCheck());
 }
 
 
@@ -939,33 +949,33 @@ GNEViewNet::onLeftBtnPress(FXObject*, FXSelector, void* eventData) {
                     if (!myObjectsUnderCursor.getJunctionFront()) {
                         myObjectsUnderCursor.setCreatedJunction(myNet->createJunction(snapToActiveGrid(getPositionInformation()), myUndoList));
                     }
-                    if (myCreateEdgeSource == nullptr) {
-                        myCreateEdgeSource = myObjectsUnderCursor.getJunctionFront();
-                        myCreateEdgeSource->markAsCreateEdgeSource();
+                    if (myCreateEdgeValues.createEdgeSource == nullptr) {
+                        myCreateEdgeValues.createEdgeSource = myObjectsUnderCursor.getJunctionFront();
+                        myCreateEdgeValues.createEdgeSource->markAsCreateEdgeSource();
                         update();
                     } else {
-                        if (myCreateEdgeSource != myObjectsUnderCursor.getJunctionFront()) {
+                        if (myCreateEdgeValues.createEdgeSource != myObjectsUnderCursor.getJunctionFront()) {
                             // may fail to prevent double edges
                             GNEEdge* newEdge = myNet->createEdge(
-                                                   myCreateEdgeSource, myObjectsUnderCursor.getJunctionFront(), myViewParent->getInspectorFrame()->getTemplateEditor()->getEdgeTemplate(), myUndoList);
+                                                   myCreateEdgeValues.createEdgeSource, myObjectsUnderCursor.getJunctionFront(), myViewParent->getInspectorFrame()->getTemplateEditor()->getEdgeTemplate(), myUndoList);
                             if (newEdge) {
                                 // create another edge, if create opposite edge is enabled
-                                if (myAutoCreateOppositeEdge->getCheck()) {
-                                    myNet->createEdge(myObjectsUnderCursor.getJunctionFront(), myCreateEdgeSource, myViewParent->getInspectorFrame()->getTemplateEditor()->getEdgeTemplate(), myUndoList, "-" + newEdge->getNBEdge()->getID());
+                                if (myCreateEdgeValues.autoCreateOppositeEdge->getCheck()) {
+                                    myNet->createEdge(myObjectsUnderCursor.getJunctionFront(), myCreateEdgeValues.createEdgeSource, myViewParent->getInspectorFrame()->getTemplateEditor()->getEdgeTemplate(), myUndoList, "-" + newEdge->getNBEdge()->getID());
                                 }
-                                myCreateEdgeSource->unMarkAsCreateEdgeSource();
+                                myCreateEdgeValues.createEdgeSource->unMarkAsCreateEdgeSource();
 
                                 if (myUndoList->hasCommandGroup()) {
                                     myUndoList->p_end();
                                 } else {
                                     std::cout << "edge created without an open CommandGroup )-:\n";
                                 }
-                                if (myChainCreateEdge->getCheck()) {
-                                    myCreateEdgeSource = myObjectsUnderCursor.getJunctionFront();
-                                    myCreateEdgeSource->markAsCreateEdgeSource();
+                                if (myCreateEdgeValues.chainCreateEdge->getCheck()) {
+                                    myCreateEdgeValues.createEdgeSource = myObjectsUnderCursor.getJunctionFront();
+                                    myCreateEdgeValues.createEdgeSource->markAsCreateEdgeSource();
                                     myUndoList->p_begin("create new " + toString(SUMO_TAG_EDGE));
                                 } else {
-                                    myCreateEdgeSource = nullptr;
+                                    myCreateEdgeValues.createEdgeSource = nullptr;
                                 }
                             } else {
                                 setStatusBarText("An " + toString(SUMO_TAG_EDGE) + " with the same geometry already exists!");
@@ -1373,11 +1383,15 @@ GNEViewNet::onMouseMove(FXObject* obj, FXSelector sel, void* eventData) {
     if ((myEditMode == GNE_MODE_POLYGON) && myViewParent->getPolygonFrame()->getDrawingShapeModul()->isDrawing()) {
         myViewParent->getPolygonFrame()->getDrawingShapeModul()->setDeleteLastCreatedPoint(myShiftKeyPressed);
     }
-    // calculate offset
-    Position offsetMovement = snapToActiveGrid(getPositionInformation()) - myMoveSingleElementValues.movingOriginalPosition;
-    if (myMenuCheckMoveElevation->getCheck()) {
-        const double dist = int((offsetMovement.y() + offsetMovement.x()) / myVisualizationSettings->gridXSize) * myVisualizationSettings->gridXSize;
-        offsetMovement = Position(0, 0, dist / 10);
+    // calculate offset between current position and original position
+    Position offsetMovement = getPositionInformation() - myMoveSingleElementValues.movingOriginalPosition;
+    // calculate Z depending of Grid
+    if (myCreateEdgeValues.menuCheckMoveElevation->shown() && myCreateEdgeValues.menuCheckMoveElevation->getCheck() == TRUE) {
+        // reset offset X and Y and use Y for Z
+        offsetMovement = Position(0, 0, offsetMovement.y());
+    } else {
+        // leave z empty (because in this case offset only actuates over X-Y)
+        offsetMovement.setz(0);
     }
     // @note  #3521: Add checkBox to allow moving elements... has to behere implemented
     // check what type of additional is moved
@@ -1465,10 +1479,10 @@ void
 GNEViewNet::abortOperation(bool clearSelection) {
     // steal focus from any text fields
     setFocus();
-    if (myCreateEdgeSource != nullptr) {
+    if (myCreateEdgeValues.createEdgeSource != nullptr) {
         // remove current created edge source
-        myCreateEdgeSource->unMarkAsCreateEdgeSource();
-        myCreateEdgeSource = nullptr;
+        myCreateEdgeValues.createEdgeSource->unMarkAsCreateEdgeSource();
+        myCreateEdgeValues.createEdgeSource = nullptr;
     } else if (myEditMode == GNE_MODE_SELECT) {
         mySelectingArea.selectingUsingRectangle = false;
         // check if current selection has to be cleaned
@@ -2800,7 +2814,15 @@ GNEViewNet::onCmdToogleSelectEdges(FXObject*, FXSelector, void*) {
 
 long
 GNEViewNet::onCmdToogleShowBubbles(FXObject*, FXSelector, void*) {
-    // Update view net Shapes
+    // Only update view
+    update();
+    return 1;
+}
+
+
+long
+GNEViewNet::onCmdToogleMoveElevation(FXObject*, FXSelector, void*) {
+    // Only update view
     update();
     return 1;
 }
@@ -2885,24 +2907,11 @@ GNEViewNet::setEditMode(EditMode mode) {
 
 void
 GNEViewNet::buildEditModeControls() {
-    // initialize mappings
-    myEditModeNames.insert("(e) Create Edge", GNE_MODE_CREATE_EDGE);
-    myEditModeNames.insert("(m) Move", GNE_MODE_MOVE);
-    myEditModeNames.insert("(d) Delete", GNE_MODE_DELETE);
-    myEditModeNames.insert("(i) Inspect", GNE_MODE_INSPECT);
-    myEditModeNames.insert("(s) Select", GNE_MODE_SELECT);
-    myEditModeNames.insert("(c) Connect", GNE_MODE_CONNECT);
-    myEditModeNames.insert("(t) Traffic Lights", GNE_MODE_TLS);
-    myEditModeNames.insert("(a) Additionals", GNE_MODE_ADDITIONAL);
-    myEditModeNames.insert("(r) Crossings", GNE_MODE_CROSSING);
-    myEditModeNames.insert("(p) Polygons", GNE_MODE_POLYGON);
-    myEditModeNames.insert("(w) Prohibitions", GNE_MODE_PROHIBITION);
-
     // initialize buttons for modes
     myEditModeCreateEdge = new MFXCheckableButton(false, myToolbar, "\tset create edge mode\tMode for creating junction and edges.",
             GUIIconSubSys::getIcon(ICON_MODECREATEEDGE), this, MID_GNE_SETMODE_CREATE_EDGE, GUIDesignButtonToolbarCheckable);
     myEditModeMove = new MFXCheckableButton(false, myToolbar, "\tset move mode\tMode for move elements.",
-                                            GUIIconSubSys::getIcon(ICON_MODEMOVE), this, MID_GNE_SETMODE_MOVE, GUIDesignButtonToolbarCheckable);
+            GUIIconSubSys::getIcon(ICON_MODEMOVE), this, MID_GNE_SETMODE_MOVE, GUIDesignButtonToolbarCheckable);
     myEditModeDelete = new MFXCheckableButton(false, myToolbar, "\tset delete mode\tMode for delete elements.",
             GUIIconSubSys::getIcon(ICON_MODEDELETE), this, MID_GNE_SETMODE_DELETE, GUIDesignButtonToolbarCheckable);
     myEditModeInspect = new MFXCheckableButton(false, myToolbar, "\tset inspect mode\tMode for inspect elements and change their attributes.",
@@ -2927,11 +2936,11 @@ GNEViewNet::buildEditModeControls() {
     // @ToDo add here new FXToolBarGrip(myNavigationToolBar, nullptr, 0, GUIDesignToolbarGrip);
 
     // initialize mode specific controls
-    myChainCreateEdge = new FXMenuCheck(myToolbar, ("Chain\t\tCreate consecutive " + toString(SUMO_TAG_EDGE) + "s with a single click (hit ESC to cancel chain).").c_str(), this, 0);
-    myChainCreateEdge->setCheck(false);
+    myCreateEdgeValues.chainCreateEdge = new FXMenuCheck(myToolbar, ("Chain\t\tCreate consecutive " + toString(SUMO_TAG_EDGE) + "s with a single click (hit ESC to cancel chain).").c_str(), this, 0);
+    myCreateEdgeValues.chainCreateEdge->setCheck(false);
 
-    myAutoCreateOppositeEdge = new FXMenuCheck(myToolbar, ("Two-way\t\tAutomatically create an " + toString(SUMO_TAG_EDGE) + " in the opposite direction").c_str(), this, 0);
-    myAutoCreateOppositeEdge->setCheck(false);
+    myCreateEdgeValues.autoCreateOppositeEdge = new FXMenuCheck(myToolbar, ("Two-way\t\tAutomatically create an " + toString(SUMO_TAG_EDGE) + " in the opposite direction").c_str(), this, 0);
+    myCreateEdgeValues.autoCreateOppositeEdge->setCheck(false);
 
     myMenuCheckSelectEdges = new FXMenuCheck(myToolbar, ("Select edges\t\tToggle whether clicking should select " + toString(SUMO_TAG_EDGE) + "s or " + toString(SUMO_TAG_LANE) + "s").c_str(), this, MID_GNE_VIEWNET_SELECT_EDGES);
     myMenuCheckSelectEdges->setCheck(true);
@@ -2944,14 +2953,14 @@ GNEViewNet::buildEditModeControls() {
 
     myMenuCheckExtendToEdgeNodes = new FXMenuCheck(myToolbar, ("Auto-select " + toString(SUMO_TAG_JUNCTION) + "s\t\tToggle whether selecting multiple " + toString(SUMO_TAG_EDGE) + "s should automatically select their " + toString(SUMO_TAG_JUNCTION) + "s").c_str(), this, 0);
 
-    myMenuCheckWarnAboutMerge = new FXMenuCheck(myToolbar, ("Ask for merge\t\tAsk for confirmation before merging " + toString(SUMO_TAG_JUNCTION) + ".").c_str(), this, 0);
-    myMenuCheckWarnAboutMerge->setCheck(true);
+    myCreateEdgeValues.menuCheckWarnAboutMerge = new FXMenuCheck(myToolbar, ("Ask for merge\t\tAsk for confirmation before merging " + toString(SUMO_TAG_JUNCTION) + ".").c_str(), this, 0);
+    myCreateEdgeValues.menuCheckWarnAboutMerge->setCheck(true);
 
-    myMenuCheckShowBubbleOverJunction = new FXMenuCheck(myToolbar, ("Bubbles\t\tShow bubbles over " + toString(SUMO_TAG_JUNCTION) + "'s shapes.").c_str(), this, MID_GNE_VIEWNET_SHOW_BUBBLES);
-    myMenuCheckShowBubbleOverJunction->setCheck(false);
+    myCreateEdgeValues.menuCheckShowBubbleOverJunction = new FXMenuCheck(myToolbar, ("Bubbles\t\tShow bubbles over " + toString(SUMO_TAG_JUNCTION) + "'s shapes.").c_str(), this, MID_GNE_VIEWNET_SHOW_BUBBLES);
+    myCreateEdgeValues.menuCheckShowBubbleOverJunction->setCheck(false);
 
-    myMenuCheckMoveElevation = new FXMenuCheck(myToolbar, "Elevation\t\tApply mouse movement to elevation instead of x,y position", this, MID_GNE_VIEWNET_MOVE_ELEVATION);
-    myMenuCheckMoveElevation->setCheck(false);
+    myCreateEdgeValues.menuCheckMoveElevation = new FXMenuCheck(myToolbar, "Elevation\t\tApply mouse movement to elevation instead of x,y position", this, MID_GNE_VIEWNET_MOVE_ELEVATION);
+    myCreateEdgeValues.menuCheckMoveElevation->setCheck(false);
 
     myMenuCheckChangeAllPhases = new FXMenuCheck(myToolbar, ("Apply change to all phases\t\tToggle whether clicking should apply state changes to all phases of the current " + toString(SUMO_TAG_TRAFFIC_LIGHT) + " plan").c_str(), this, 0);
     myMenuCheckChangeAllPhases->setCheck(false);
@@ -2966,16 +2975,12 @@ GNEViewNet::updateModeSpecificControls() {
     // hide grid
     myMenuCheckShowGrid->setCheck(myVisualizationSettings->showGrid);
     // hide all controls (checkboxs)
-    myChainCreateEdge->hide();
-    myAutoCreateOppositeEdge->hide();
+    myCreateEdgeValues.hideCheckBoxs();
     myMenuCheckSelectEdges->hide();
     myMenuCheckShowConnections->hide();
     myMenuCheckHideConnections->hide();
     myMenuCheckExtendToEdgeNodes->hide();
     myMenuCheckChangeAllPhases->hide();
-    myMenuCheckWarnAboutMerge->hide();
-    myMenuCheckShowBubbleOverJunction->hide();
-    myMenuCheckMoveElevation->hide();
     myMenuCheckShowGrid->hide();
     // unckeck all edit modes
     myEditModeCreateEdge->setChecked(false);
@@ -2994,15 +2999,15 @@ GNEViewNet::updateModeSpecificControls() {
     // enable selected controls
     switch (myEditMode) {
         case GNE_MODE_CREATE_EDGE:
-            myChainCreateEdge->show();
-            myAutoCreateOppositeEdge->show();
+            myCreateEdgeValues.chainCreateEdge->show();
+            myCreateEdgeValues.autoCreateOppositeEdge->show();
             myEditModeCreateEdge->setChecked(true);
             myMenuCheckShowGrid->show();
             break;
         case GNE_MODE_MOVE:
-            myMenuCheckWarnAboutMerge->show();
-            myMenuCheckShowBubbleOverJunction->show();
-            myMenuCheckMoveElevation->show();
+            myCreateEdgeValues.menuCheckWarnAboutMerge->show();
+            myCreateEdgeValues.menuCheckShowBubbleOverJunction->show();
+            myCreateEdgeValues.menuCheckMoveElevation->show();
             myEditModeMove->setChecked(true);
             myMenuCheckShowGrid->show();
             break;
@@ -3257,7 +3262,7 @@ GNEViewNet::mergeJunctions(GNEJunction* moved, const Position& oldPos) {
     }
     if (mergeTarget) {
         // optionally ask for confirmation
-        if (myMenuCheckWarnAboutMerge->getCheck()) {
+        if (myCreateEdgeValues.menuCheckWarnAboutMerge->getCheck()) {
             WRITE_DEBUG("Opening FXMessageBox 'merge junctions'");
             // open question box
             FXuint answer = FXMessageBox::question(this, MBOX_YES_NO,
@@ -3438,12 +3443,15 @@ GNEViewNet::MoveMultipleElementValues::beginMoveSelection(GNEAttributeCarrier* o
 
 void
 GNEViewNet::MoveMultipleElementValues::moveSelection() {
-    // calculate offset movement
-    Position offsetMovement = myViewNet->snapToActiveGrid(myViewNet->getPositionInformation()) - myClickedPosition;
-    // check elevation
-    if (myViewNet->myMenuCheckMoveElevation->getCheck()) {
-        const double dist = int((offsetMovement.y() + offsetMovement.x()) / myViewNet->myVisualizationSettings->gridXSize) * myViewNet->myVisualizationSettings->gridXSize;
-        offsetMovement = Position(0, 0, dist / 10);
+    // calculate offset between current position and original position
+    Position offsetMovement = myViewNet->getPositionInformation() - myClickedPosition;
+    // calculate Z depending of Grid
+    if (myViewNet->myCreateEdgeValues.menuCheckMoveElevation->shown() && myViewNet->myCreateEdgeValues.menuCheckMoveElevation->getCheck() == TRUE) {
+        // reset offset X and Y and use Y for Z
+        offsetMovement = Position(0, 0, offsetMovement.y());
+    } else {
+        // leave z empty (because in this case offset only actuates over X-Y)
+        offsetMovement.setz(0);
     }
     // move selected junctions
     for (auto i : myMovedJunctionOriginPositions) {
@@ -3674,6 +3682,24 @@ GNEViewNet::TestingMode::TestingMode() :
     drawRefSquare(false),
     testingWidth(0),
     testingHeight(0) {
+}
+
+// ---------------------------------------------------------------------------
+// GNEViewNet::CreateEdgeValues - methods
+// ---------------------------------------------------------------------------
+
+GNEViewNet::CreateEdgeValues::CreateEdgeValues() : 
+    createEdgeSource(nullptr) {
+}
+
+
+void
+GNEViewNet::CreateEdgeValues::hideCheckBoxs() {
+    chainCreateEdge->hide();
+    autoCreateOppositeEdge->hide();
+    menuCheckWarnAboutMerge->hide();
+    menuCheckShowBubbleOverJunction->hide();
+    menuCheckMoveElevation->hide();
 }
 
 // ---------------------------------------------------------------------------

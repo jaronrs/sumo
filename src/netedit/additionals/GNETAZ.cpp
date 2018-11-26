@@ -97,6 +97,7 @@ GNETAZ::moveGeometry(const Position& offset) {
     // restore old position, apply offset and update Geometry
     myGeometry.shape[0] = myMove.originalViewPosition;
     myGeometry.shape[0].add(offset);
+    // filtern position using snap to active grid
     myGeometry.shape[0] = myViewNet->snapToActiveGrid(myGeometry.shape[0]);
     updateGeometry(false);
 }
@@ -119,32 +120,18 @@ GNETAZ::moveVertexShape(const int index, const Position& oldPos, const Position&
         if (index < (int)myGeometry.shape.size()) {
             // save current moving Geometry Point
             myCurrentMovingVertexIndex = index;
-            // Declare value for saving Z value (needed because movement is only in X-Y)
-            double zValue = 0;
             // if closed shape and cliked is first or last, move both giving more priority to first always
             if ((index == 0 || index == (int)myGeometry.shape.size() - 1)) {
-                // save Z value of first shape Geometry Point
-                zValue = myGeometry.shape.front().z();
                 // Change position of first shape Geometry Point
                 myGeometry.shape.front() = oldPos;
                 myGeometry.shape.front().add(offset);
-                // restore Z value of first shape Geometry Point
-                myGeometry.shape.front().setz(zValue);
-                // save Z value of last shape Geometry Point
-                zValue = myGeometry.shape.back().z();
                 // Change position of last shape Geometry Point
                 myGeometry.shape.back() = oldPos;
                 myGeometry.shape.back().add(offset);
-                // restore Z value of last shape Geometry Point
-                myGeometry.shape.back().setz(zValue);
             } else {
-                // save Z value of Geometry Point
-                zValue = myGeometry.shape.back().z();
                 // change position of Geometry Point
                 myGeometry.shape[index] = oldPos;
                 myGeometry.shape[index].add(offset);
-                // restore Z value of Geometry Point
-                myGeometry.shape.back().setz(zValue);
             }
             // return index of moved Geometry Point
             return index;
@@ -314,7 +301,7 @@ GNETAZ::drawGL(const GUIVisualizationSettings& s) const {
             glPopMatrix();
             // draw points of shape
             for (auto i : myGeometry.shape) {
-                if (!s.drawForSelecting || (myViewNet->getPositionInformation().distanceSquaredTo(i) <= (myHintSizeSquared + 2))) {
+                if (!s.drawForSelecting || (myViewNet->getPositionInformation().distanceSquaredTo2D(i) <= (myHintSizeSquared + 2))) {
                     glPushMatrix();
                     glTranslated(i.x(), i.y(), GLO_POLYGON + 0.02);
                     // Change color of vertex and flag mouseOverVertex if mouse is over vertex
