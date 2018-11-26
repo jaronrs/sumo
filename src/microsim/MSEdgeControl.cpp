@@ -239,22 +239,26 @@ MSEdgeControl::changeLanes(const SUMOTime t) {
             if (myLastLaneChange[edge.getNumericalID()] != t) {
                 myLastLaneChange[edge.getNumericalID()] = t;
 #ifdef PARALLEL_CHANGE_LANES
-                MSLane* lane = edge.getLanes()[0];
-                myThreadPool.add(lane->getLaneChangeTask(t), lane->getRNGIndex() % myThreadPool.size());
-                recheckLaneUsage.push_back(edge);
-#else
-                edge.changeLanes(t);
-                const std::vector<MSLane*>& lanes = edge.getLanes();
-                for (std::vector<MSLane*>::const_iterator i = lanes.begin(); i != lanes.end(); ++i) {
-                    LaneUsage& lu = myLanes[(*i)->getNumericalID()];
-                    //if ((*i)->getID() == "disabled") {
-                    //    std::cout << SIMTIME << " vehicles=" << toString((*i)->getVehiclesSecure()) << "\n";
-                    //    (*i)->releaseVehicles();
-                    //}
-                    if ((*i)->getVehicleNumber() > 0 && !lu.amActive) {
-                        toAdd.push_back(*i);
-                        lu.amActive = true;
+                if (MSGlobals::gNumSimThreads > 1) {
+                    MSLane* lane = edge.getLanes()[0];
+                    myThreadPool.add(lane->getLaneChangeTask(t), lane->getRNGIndex() % myThreadPool.size());
+                    recheckLaneUsage.push_back(&edge);
+                } else {
+#endif
+                    edge.changeLanes(t);
+                    const std::vector<MSLane*>& lanes = edge.getLanes();
+                    for (std::vector<MSLane*>::const_iterator i = lanes.begin(); i != lanes.end(); ++i) {
+                        LaneUsage& lu = myLanes[(*i)->getNumericalID()];
+                        //if ((*i)->getID() == "disabled") {
+                        //    std::cout << SIMTIME << " vehicles=" << toString((*i)->getVehiclesSecure()) << "\n";
+                        //    (*i)->releaseVehicles();
+                        //}
+                        if ((*i)->getVehicleNumber() > 0 && !lu.amActive) {
+                            toAdd.push_back(*i);
+                            lu.amActive = true;
+                        }
                     }
+#ifdef PARALLEL_CHANGE_LANES
                 }
 #endif
             }
@@ -265,18 +269,16 @@ MSEdgeControl::changeLanes(const SUMOTime t) {
     }
     
 #ifdef PARALLEL_CHANGE_LANES
-    myThreadPool.waitAll(false);
-    for (MSEdge* e : recheckLaneUsage) {
-        const std::vector<MSLane*>& lanes = e->getLanes();
-        for (std::vector<MSLane*>::const_iterator i = lanes.begin(); i != lanes.end(); ++i) {
-            LaneUsage& lu = myLanes[(*i)->getNumericalID()];
-            //if ((*i)->getID() == "disabled") {
-            //    std::cout << SIMTIME << " vehicles=" << toString((*i)->getVehiclesSecure()) << "\n";
-            //    (*i)->releaseVehicles();
-            //}
-            if ((*i)->getVehicleNumber() > 0 && !lu.amActive) {
-                toAdd.push_back(*i);
-                lu.amActive = true;
+    if (MSGlobals::gNumSimThreads > 1) {
+        myThreadPool.waitAll(false);
+        for (MSEdge* e : recheckLaneUsage) {
+            const std::vector<MSLane*>& lanes = e->getLanes();
+            for (std::vector<MSLane*>::const_iterator i = lanes.begin(); i != lanes.end(); ++i) {
+                LaneUsage& lu = myLanes[(*i)->getNumericalID()];
+                if ((*i)->getVehicleNumber() > 0 && !lu.amActive) {
+                    toAdd.push_back(*i);
+                    lu.amActive = true;
+                }
             }
         }
     }
