@@ -3848,24 +3848,6 @@ GNEViewNet::CreateEdgeValues::hideCheckBoxs() {
 }
 
 // ---------------------------------------------------------------------------
-// GNEViewNet::CreateEdgeValues - methods
-// ---------------------------------------------------------------------------
-
-GNEViewNet::CreateEdgeValues::CreateEdgeValues() : 
-    createEdgeSource(nullptr) {
-}
-
-
-void
-GNEViewNet::CreateEdgeValues::hideCheckBoxs() {
-    chainCreateEdge->hide();
-    autoCreateOppositeEdge->hide();
-    menuCheckWarnAboutMerge->hide();
-    menuCheckShowBubbleOverJunction->hide();
-    menuCheckMoveElevation->hide();
-}
-
-// ---------------------------------------------------------------------------
 // Private methods
 // ---------------------------------------------------------------------------
 

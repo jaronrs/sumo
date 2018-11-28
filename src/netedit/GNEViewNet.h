@@ -754,34 +754,6 @@ private:
         FXMenuCheck* menuCheckMoveElevation;
     };
 
-    /// @brief struct used to group all variables related to create edges
-    struct CreateEdgeValues {
-
-        /// @brief default constructor
-        CreateEdgeValues();
-
-        /// @brief hide all MenuChecks
-        void hideCheckBoxs();
-
-        /// @brief source junction for new edge 0 if no edge source is selected an existing (or newly created) junction otherwise
-        GNEJunction* createEdgeSource;
-
-        /// @brief whether the endpoint for a created edge should be set as the new source
-        FXMenuCheck* chainCreateEdge;
-
-        /// @brief create auto create opposite edge
-        FXMenuCheck* autoCreateOppositeEdge;
-
-        /// @brief whether we should warn about merging junctions
-        FXMenuCheck* menuCheckWarnAboutMerge;
-
-        /// @brief show connection as buuble in "Move" mode.
-        FXMenuCheck* menuCheckShowBubbleOverJunction;
-
-        /// @brief apply movement to elevation
-        FXMenuCheck* menuCheckMoveElevation;
-    };
-
     /// @brief view parent
     GNEViewParent* myViewParent;
 
