@@ -461,6 +461,9 @@ MSFrame::fillOptions() {
     oc.doRegister("start", 'S', new Option_Bool(false));
     oc.addDescription("start", "GUI Only", "Start the simulation after loading");
 
+    oc.doRegister("breakpoints", new Option_String());
+    oc.addDescription("breakpoints", "Output", "Use TIME[] as times when the simulation should halt");
+
     oc.doRegister("demo", 'D', new Option_Bool(false));
     oc.addDescription("demo", "GUI Only", "Restart the simulation after ending (demo mode)");
 
@@ -630,6 +633,14 @@ MSFrame::checkOptions() {
             }
         }
     }
+    for (const std::string& val : oc.getStringVector("breakpoints")) {
+        try {
+            string2time(val);
+        } catch (ProcessError& e) {
+            WRITE_ERROR("Invalid time '" + val + "' for option 'breakpoints'. Must be a FLOAT or human-readable time");
+            ok = false;
+        }
+    };
     if (oc.getInt("threads") > oc.getInt("thread-rngs")) {
         WRITE_WARNING("Number of threads exceeds number of thread-rngs. Simulation runs with the same seed may produce different results");
     }
@@ -697,7 +708,7 @@ MSFrame::setMSGlobals(OptionsCont& oc) {
     MSGlobals::gNumSimThreads = OptionsCont::getOptions().getInt("threads");
 
     MSGlobals::gEmergencyDecelWarningThreshold = oc.getFloat("emergencydecel.warning-threshold");
-
+    
 #ifdef _DEBUG
     if (oc.isSet("movereminder-output")) {
         MSBaseVehicle::initMoveReminderOutput(oc);

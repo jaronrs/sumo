@@ -334,7 +334,8 @@ private:
     NamePanel* myEdgeNamePanel, *myInternalEdgeNamePanel, *myCwaEdgeNamePanel, *myStreetNamePanel, *myEdgeValuePanel,
                *myJunctionIndexPanel, *myTLIndexPanel,
                *myJunctionNamePanel, *myInternalJunctionNamePanel,
-               *myVehicleNamePanel, *myPersonNamePanel, *myContainerNamePanel,
+               *myVehicleNamePanel, *myVehicleValuePanel,
+               *myPersonNamePanel, *myContainerNamePanel,
                *myAddNamePanel, *myAddFullNamePanel, *myPOINamePanel, *myPolyNamePanel, *myPOITypePanel, *myPolyTypePanel;
 
     SizePanel* myVehicleSizePanel, *myPersonSizePanel, *myContainerSizePanel, *myPOISizePanel, *myPolySizePanel, *myAddSizePanel, *myJunctionSizePanel;

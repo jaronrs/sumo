@@ -26,16 +26,16 @@ e2MultiLaneDetector
 e3detector
 
 # det entry
-#detentry
+detentry
 
 # det exit
-#detexit
+detexit
 
 # E1 Instant detector
 e1InstantDetector
 
 # calibrator
-#calibrator
+calibrator
 
 # lanecalibrator
 #lanecalibrator

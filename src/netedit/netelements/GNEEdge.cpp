@@ -500,6 +500,15 @@ GNEEdge::drawGL(const GUIVisualizationSettings& s) const {
                     // resolution of drawn circle depending of the zoom (To improve smothness)
                     GLHelper::drawFilledCircle(circleWidth, circleResolution);
                     glPopMatrix();
+                    // draw elevation or special symbols (Start, End and Block)
+                    if (!s.drawForSelecting && myNet->getViewNet()->editingElevation()) {
+                        glPushMatrix();
+                        // Translate to geometry point
+                        glTranslated(pos.x(), pos.y(), GLO_JUNCTION);
+                        // draw Z value
+                        GLHelper::drawText(toString(pos.z()), Position(), GLO_MAX - 5, s.edgeValue.scaledSize(s.scale) / 2, s.edgeValue.color);
+                        glPopMatrix();
+                    } 
                 }
             }
             // draw line geometry, start and end points if shapeStart or shape end is edited, and depending of drawForSelecting
@@ -584,7 +593,7 @@ GNEEdge::drawGL(const GUIVisualizationSettings& s) const {
         }
         glPopName();
     }
-    if (!s.drawForSelecting && (myNet->getViewNet()->getACUnderCursor() == this)) {
+    if (!s.drawForSelecting && (myNet->getViewNet()->getDottedAC() == this)) {
         // draw dotted contor around the first and last lane
         const double myHalfLaneWidthFront = myNBEdge.getLaneWidth(myLanes.front()->getIndex()) / 2;
         const double myHalfLaneWidthBack = myNBEdge.getLaneWidth(myLanes.back()->getIndex()) / 2;

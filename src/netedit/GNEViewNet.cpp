@@ -503,7 +503,10 @@ GNEViewNet::GNEViewNet(FXComposite* tmpParent, FXComposite* actualParent, GUIMai
     myShowConnections(false),
     mySelectEdges(true),
     myShiftKeyPressed(false),
+    myMoveSingleElementValues(this), 
     myMoveMultipleElementValues(this), 
+    mySelectingArea(this),
+    myTestingMode(this), 
     myToolbar(toolBar),
     myEditModeCreateEdge(nullptr),
     myEditModeMove(nullptr),
@@ -517,8 +520,7 @@ GNEViewNet::GNEViewNet(FXComposite* tmpParent, FXComposite* actualParent, GUIMai
     myEditModePolygon(nullptr),
     myEditModeProhibition(nullptr),
     myUndoList(undoList),
-    myEditShapePoly(nullptr)
-{
+    myEditShapePoly(nullptr) {
     // view must be the final member of actualParent
     reparent(actualParent);
 
@@ -531,15 +533,8 @@ GNEViewNet::GNEViewNet(FXComposite* tmpParent, FXComposite* actualParent, GUIMai
     // Reset textures
     GUITextureSubSys::resetTextures();
 
-    if (myTestingMode.testingEnabled && OptionsCont::getOptions().isSet("window-size")) {
-        std::vector<std::string> windowSize = OptionsCont::getOptions().getStringVector("window-size");
-        if (windowSize.size() == 2 && GNEAttributeCarrier::canParse<int>(windowSize[0]) && GNEAttributeCarrier::canParse<int>(windowSize[1])) {
-            myTestingMode.testingWidth = GNEAttributeCarrier::parse<int>(windowSize[0]);
-            myTestingMode.testingHeight = GNEAttributeCarrier::parse<int>(windowSize[1]);
-        } else {
-            WRITE_ERROR("Invalid windows size-format: " + toString(windowSize) + "for option 'window-size'");
-        }
-    }
+    // init testing mode
+    myTestingMode.initTestingMode();
 }
 
 
@@ -827,14 +822,11 @@ GNEViewNet::stopEditCustomShape() {
 }
 
 
-void 
-GNEViewNet::enableReferenceSquare() {
-    myTestingMode.drawRefSquare = true;
-}
-
-
 GNEViewNet::GNEViewNet() : 
-    myMoveMultipleElementValues(this) {
+    myMoveSingleElementValues(this),
+    myMoveMultipleElementValues(this),
+    mySelectingArea(this),
+    myTestingMode(this) {
 }
 
 
@@ -868,44 +860,15 @@ GNEViewNet::doPaintGL(int mode, const Boundary& bound) {
             myMenuCheckShowGrid->setCheck(false);
         }
         myMenuCheckShowConnections->setCheck(myVisualizationSettings->showLane2Lane);
-        if (myTestingMode.testingEnabled) {
-            if (myTestingMode.testingWidth > 0 && (getWidth() != myTestingMode.testingWidth || getHeight() != myTestingMode.testingHeight)) {
-                // only resize once to avoid flickering
-                //std::cout << " before resize: view=" << getWidth() << ", " << getHeight() << " app=" << myApp->getWidth() << ", " << myApp->getHeight() << "\n";
-                myApp->resize(myTestingMode.testingWidth + myTestingMode.testingWidth - getWidth(), myTestingMode.testingHeight + myTestingMode.testingHeight - getHeight());
-                //std::cout << " directly after resize: view=" << getWidth() << ", " << getHeight() << " app=" << myApp->getWidth() << ", " << myApp->getHeight() << "\n";
-                myTestingMode.testingWidth = 0;
-            }
-            //std::cout << " fixed: view=" << getWidth() << ", " << getHeight() << " app=" << myApp->getWidth() << ", " << myApp->getHeight() << "\n";
-            if (myTestingMode.drawRefSquare) {
-                // draw pink square in the upper left corner on top of everything
-                glPushMatrix();
-                const double size = p2m(32);
-                Position center = screenPos2NetPos(8, 8);
-                GLHelper::setColor(RGBColor::MAGENTA);
-                glTranslated(center.x(), center.y(), GLO_MAX - 1);
-                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-                glBegin(GL_QUADS);
-                glVertex2d(0, 0);
-                glVertex2d(0, -size);
-                glVertex2d(size, -size);
-                glVertex2d(size, 0);
-                glEnd();
-                glPopMatrix();
-                // show box with the current position relative to pink square
-                Position posRelative = screenPos2NetPos(getWidth() - 40, getHeight() - 20);
-                // adjust cursor position (24,25) to show exactly the same position as in function netedit.leftClick(match, X, Y)
-                GLHelper::drawTextBox(toString(myWindowCursorPositionX - 24) + " " + toString(myWindowCursorPositionY - 25), posRelative, GLO_MAX - 1, p2m(20), RGBColor::BLACK, RGBColor::WHITE);
-            }
-        }
-    }
 
+    }
     // draw temporal elements
     if (!myVisualizationSettings->drawForSelecting) {
         drawTemporalDrawShape();
         drawLaneCandidates();
+        // draw testing elements
+        myTestingMode.drawTestingElements(myApp);
     }
-
     // draw elements
     glLineWidth(1);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -940,6 +903,7 @@ GNEViewNet::onLeftBtnPress(FXObject*, FXSelector, void* eventData) {
         // decide what to do based on mode
         switch (myEditMode) {
             case GNE_MODE_CREATE_EDGE: {
+
             /** this function will be implemented in the future class GNECreateEdgeFrame **/
                 // make sure that Control key isn't pressed
                 if (!myObjectsUnderCursor.controlKeyPressed()) {
@@ -993,109 +957,46 @@ GNEViewNet::onLeftBtnPress(FXObject*, FXSelector, void* eventData) {
             }
             case GNE_MODE_MOVE: {
                 // first obtain moving reference (common for all)
-                myMoveSingleElementValues.movingReference = snapToActiveGrid(getPositionInformation());
+                myMoveSingleElementValues.relativeClickedPosition = getPositionInformation();
                 // check what type of AC will be moved
                 if (myObjectsUnderCursor.getPolyFront()) {
-                    // set Poly to move
-                    myMovedItems.polyToMove = myObjectsUnderCursor.getPolyFront();
-                    // save original shape (needed for commit change)
-                    myMoveSingleElementValues.movingOriginalShape = myMovedItems.polyToMove->getShape();
-                    // save clicked position as moving original position
-                    myMoveSingleElementValues.movingOriginalPosition = getPositionInformation();
-                    // obtain index of vertex to move if shape isn't blocked
-                    if ((myMovedItems.polyToMove->isPolygonBlocked() == false) && (myMovedItems.polyToMove->isMovementBlocked() == false)) {
-                        // check if we want to remove a Geometry Point
-                        if (myShiftKeyPressed) {
-                            // check if we're clicked over a Geometry Point
-                            myMoveSingleElementValues.movingIndexShape = myMovedItems.polyToMove->getVertexIndex(myMoveSingleElementValues.movingOriginalPosition, false);
-                            if (myMoveSingleElementValues.movingIndexShape != -1) {
-                                myMovedItems.polyToMove->deleteGeometryPoint(myMoveSingleElementValues.movingOriginalPosition);
-                                // after removing Geomtery Point, reset PolyToMove
-                                myMovedItems.polyToMove = nullptr;
-                            }
-                        } else {
-                            // obtain index of vertex to move and moving reference
-                            myMoveSingleElementValues.movingIndexShape = myMovedItems.polyToMove->getVertexIndex(myMoveSingleElementValues.movingOriginalPosition);
-                        }
-                    } else {
-                        myMoveSingleElementValues.movingIndexShape = -1;
-                    }
+                    // calculate poly movement values (can be entire shape, single geometry points, altitude, etc.)
+                    myMoveSingleElementValues.calculatePolyValues();
                 } else if (myObjectsUnderCursor.getPOIFront()) {
+                    // set POI moved object
                     myMovedItems.poiToMove = myObjectsUnderCursor.getPOIFront();
-                    // Save original Position of Element
-                    myMoveSingleElementValues.movingOriginalPosition = myMovedItems.poiToMove->getPositionInView();
+                    // Save original Position of POI in view
+                    myMoveSingleElementValues.originalPositionInView = myMovedItems.poiToMove->getPositionInView();
+                    // start POI geometry moving
+                    myMovedItems.additionalToMove->startGeometryMoving();
                 } else if (myObjectsUnderCursor.getAdditionalFront()) {
-                    // save current position
-                    myMoveSingleElementValues.movingOriginalPosition = getPositionInformation();
                     // set additionals moved object
                     myMovedItems.additionalToMove = myObjectsUnderCursor.getAdditionalFront();
-                    // start additionalgeometry moving
+                    // save current position of additional
+                    myMoveSingleElementValues.originalPositionInView = myMovedItems.additionalToMove->getPositionInView();
+                    // start additional geometry moving
                     myMovedItems.additionalToMove->startGeometryMoving();
                 } else if(myObjectsUnderCursor.getTAZFront()) {
-                    // set TAZ to move
-                    myMovedItems.tazToMove = myObjectsUnderCursor.getTAZFront();
-                    // save original shape (needed for commit change)
-                    myMoveSingleElementValues.movingOriginalShape = myMovedItems.tazToMove->getShape();
-                    // save clicked position as moving original position
-                    myMoveSingleElementValues.movingOriginalPosition = getPositionInformation();
-                    // obtain index of vertex to move if shape isn't blocked
-                    if ((myMovedItems.tazToMove->isShapeBlocked() == false) && (myMovedItems.tazToMove->isAdditionalBlocked() == false)) {
-                        // check if we want to remove a Geometry Point
-                        if (myShiftKeyPressed) {
-                            // check if we're clicked over a Geometry Point
-                            myMoveSingleElementValues.movingIndexShape = myMovedItems.tazToMove->getVertexIndex(myMoveSingleElementValues.movingOriginalPosition, false);
-                            if (myMoveSingleElementValues.movingIndexShape != -1) {
-                                myMovedItems.tazToMove->deleteGeometryPoint(myMoveSingleElementValues.movingOriginalPosition);
-                                // after removing Geomtery Point, reset PolyToMove
-                                myMovedItems.tazToMove = nullptr;
-                            }
-                        } else {
-                            // obtain index of vertex to move and moving reference
-                            myMoveSingleElementValues.movingIndexShape = myMovedItems.tazToMove->getVertexIndex(myMoveSingleElementValues.movingOriginalPosition);
-                        }
-                    } else {
-                        myMoveSingleElementValues.movingIndexShape = -1;
-                    }
+                    // calculate TAZ movement values (can be entire shape or single geometry points)
+                    myMoveSingleElementValues.calculateTAZValues();
                 } else if (myObjectsUnderCursor.getJunctionFront()) {
+                    // check if we're moving a single junction or a set of selected junctions
                     if (myObjectsUnderCursor.getJunctionFront()->isAttributeCarrierSelected()) {
-                        myMoveMultipleElementValues.beginMoveSelection(myObjectsUnderCursor.getJunctionFront(), getPositionInformation());
+                        // move selection of junctions
+                        myMoveMultipleElementValues.beginMoveSelection(myObjectsUnderCursor.getJunctionFront());
                     } else {
+                        // set junction moved object
                         myMovedItems.junctionToMove = myObjectsUnderCursor.getJunctionFront();
+                        // Save original Position of Element in view
+                        myMoveSingleElementValues.originalPositionInView = myMovedItems.junctionToMove->getPositionInView();
+                        // start junction geometry moving
                         myMovedItems.junctionToMove->startGeometryMoving();
                     }
-                    // Save original Position of Element
-                    myMoveSingleElementValues.movingOriginalPosition = myObjectsUnderCursor.getJunctionFront()->getPositionInView();
                 } else if (myObjectsUnderCursor.getEdgeFront() || myObjectsUnderCursor.getLaneFront()) {
-                    // allways swap getLaneFront()s to getEdgesFront()s in movement mode
-                    if (myObjectsUnderCursor.getLaneFront()) {
-                        myObjectsUnderCursor.swapLane2Edge();
-                    }
-                    if (myObjectsUnderCursor.getEdgeFront()->isAttributeCarrierSelected()) {
-                        myMoveMultipleElementValues.beginMoveSelection(myObjectsUnderCursor.getEdgeFront(), getPositionInformation());
-                    } else if (myObjectsUnderCursor.shiftKeyPressed()) {
-                        myObjectsUnderCursor.getEdgeFront()->editEndpoint(getPositionInformation(), myUndoList);
-                    } else {
-                        myMovedItems.edgeToMove = myObjectsUnderCursor.getEdgeFront();
-                        if (myMovedItems.edgeToMove->clickedOverShapeStart(getPositionInformation())) {
-                            // save start pos
-                            myMoveSingleElementValues.movingOriginalPosition = myMovedItems.edgeToMove->getNBEdge()->getGeometry().front();
-                            myMoveSingleElementValues.movingStartPos = true;
-                        } else if (myMovedItems.edgeToMove->clickedOverShapeEnd(getPositionInformation())) {
-                            // save end pos
-                            myMoveSingleElementValues.movingOriginalPosition = myMovedItems.edgeToMove->getNBEdge()->getGeometry().back();
-                            myMoveSingleElementValues.movingEndPos = true;
-                        } else {
-                            // save original shape (needed for commit change)
-                            myMoveSingleElementValues.movingOriginalShape = myMovedItems.edgeToMove->getNBEdge()->getInnerGeometry();
-                            // obtain index of vertex to move and moving reference
-                            myMoveSingleElementValues.movingIndexShape = myMovedItems.edgeToMove->getVertexIndex(getPositionInformation());
-                            myMoveSingleElementValues.movingOriginalPosition = getPositionInformation();
-                        }
-                        // start geometry moving
-                        myMovedItems.edgeToMove->startGeometryMoving();
-                    }
+                    // calculate Edge movement values (can be entire shape, single geometry points, altitude, etc.)
+                    myMoveSingleElementValues.calculateEdgeValues();
                 } else {
-                    // process click
+                    // process click (to move camera using drag an drop)
                     processClick(evt, eventData);
                 }
                 update();
@@ -1138,9 +1039,8 @@ GNEViewNet::onLeftBtnPress(FXObject*, FXSelector, void* eventData) {
             case GNE_MODE_SELECT:
                 // check if a rect for selecting is being created
                 if (evt->state & SHIFTMASK) {
-                    mySelectingArea.selectingUsingRectangle = true;
-                    mySelectingArea.selectionCorner1 = getPositionInformation();
-                    mySelectingArea.selectionCorner2 = getPositionInformation();
+                    // begin rectangle selection
+                    mySelectingArea.beginRectangleSelection();
                 } else {
                     // first check that under cursor there is an attribute carrier and is selectable
                     if (myObjectsUnderCursor.getAttributeCarrierFront()) {
@@ -1227,9 +1127,8 @@ GNEViewNet::onLeftBtnPress(FXObject*, FXSelector, void* eventData) {
                     }
                     // check if we want to create a rect for selecting edges
                     if (myObjectsUnderCursor.shiftKeyPressed() && (myViewParent->getTAZFrame()->getTAZCurrentModul()->getTAZ() != nullptr)) {
-                        mySelectingArea.selectingUsingRectangle = true;
-                        mySelectingArea.selectionCorner1 = getPositionInformation();
-                        mySelectingArea.selectionCorner2 = getPositionInformation();
+                        // begin rectangle selection
+                        mySelectingArea.beginRectangleSelection();
                     } else {
                         // check if process click was scuesfully
                         if(myViewParent->getTAZFrame()->processClick(snapToActiveGrid(getPositionInformation()), myObjectsUnderCursor)) {
@@ -1289,25 +1188,28 @@ GNEViewNet::onLeftBtnPress(FXObject*, FXSelector, void* eventData) {
 
 long
 GNEViewNet::onLeftBtnRelease(FXObject* obj, FXSelector sel, void* eventData) {
+    // process parent function
     GUISUMOAbstractView::onLeftBtnRelease(obj, sel, eventData);
+    // obtain event data
+    FXEvent* evt = (FXEvent*)eventData;
     // update cursor
-    updateCursor((FXEvent*)eventData);
+    updateCursor(evt);
     // obtan flag to check if shift key was pressed
-    bool shiftKeyPressed = ((FXEvent*)eventData)->state & SHIFTMASK;
+    bool shiftKeyPressed = (evt->state & SHIFTMASK);
     if (myMoveMultipleElementValues.isMovingSelection()) {
         myMoveMultipleElementValues.finishMoveSelection();
     } else if (myMovedItems.polyToMove) {
-        myMovedItems.polyToMove->commitShapeChange(myMoveSingleElementValues.movingOriginalShape, myUndoList);
+        myMovedItems.polyToMove->commitShapeChange(myMoveSingleElementValues.originalShapeBeforeMoving, myUndoList);
         myMovedItems.polyToMove = nullptr;
     } else if (myMovedItems.poiToMove) {
-        myMovedItems.poiToMove->commitGeometryMoving(myMoveSingleElementValues.movingOriginalPosition, myUndoList);
+        myMovedItems.poiToMove->commitGeometryMoving(myMoveSingleElementValues.originalPositionInView, myUndoList);
         myMovedItems.poiToMove = nullptr;
     } else if (myMovedItems.junctionToMove) {
         // check if in the moved position there is another Junction and it will be merged
-        if (!mergeJunctions(myMovedItems.junctionToMove, myMoveSingleElementValues.movingOriginalPosition)) {
+        if (!mergeJunctions(myMovedItems.junctionToMove, myMoveSingleElementValues.originalPositionInView)) {
             myMovedItems.junctionToMove->endGeometryMoving();
             // position is already up to date but we must register with myUndoList
-            myMovedItems.junctionToMove->commitGeometryMoving(myMoveSingleElementValues.movingOriginalPosition, myUndoList);
+            myMovedItems.junctionToMove->commitGeometryMoving(myMoveSingleElementValues.originalPositionInView, myUndoList);
         }
         myMovedItems.junctionToMove = nullptr;
     } else if (myMovedItems.edgeToMove) {
@@ -1315,13 +1217,13 @@ GNEViewNet::onLeftBtnRelease(FXObject* obj, FXSelector sel, void* eventData) {
         myMovedItems.edgeToMove->endGeometryMoving();
         // commit change depending of what was moved
         if (myMoveSingleElementValues.movingStartPos) {
-            myMovedItems.edgeToMove->commitShapeStartChange(myMoveSingleElementValues.movingOriginalPosition, myUndoList);
+            myMovedItems.edgeToMove->commitShapeStartChange(myMoveSingleElementValues.originalPositionInView, myUndoList);
             myMoveSingleElementValues.movingStartPos = false;
         } else if (myMoveSingleElementValues.movingEndPos) {
-            myMovedItems.edgeToMove->commitShapeEndChange(myMoveSingleElementValues.movingOriginalPosition, myUndoList);
+            myMovedItems.edgeToMove->commitShapeEndChange(myMoveSingleElementValues.originalPositionInView, myUndoList);
             myMoveSingleElementValues.movingEndPos = false;
         } else {
-            myMovedItems.edgeToMove->commitShapeChange(myMoveSingleElementValues.movingOriginalShape, myUndoList);
+            myMovedItems.edgeToMove->commitShapeChange(myMoveSingleElementValues.originalShapeBeforeMoving, myUndoList);
         }
         myMovedItems.edgeToMove = nullptr;
     } else if (myMovedItems.additionalToMove) {
@@ -1329,16 +1231,34 @@ GNEViewNet::onLeftBtnRelease(FXObject* obj, FXSelector sel, void* eventData) {
         myMovedItems.additionalToMove->commitGeometryMoving(myUndoList);
         myMovedItems.additionalToMove = nullptr;
     } else if (myMovedItems.tazToMove) {
-        myMovedItems.tazToMove->commitShapeChange(myMoveSingleElementValues.movingOriginalShape, myUndoList);
+        myMovedItems.tazToMove->commitShapeChange(myMoveSingleElementValues.originalShapeBeforeMoving, myUndoList);
         myMovedItems.tazToMove = nullptr;
     } else if (mySelectingArea.selectingUsingRectangle) {
-        // check if we're selecting all type of elements o we only want a set of edges for TAZ
-        if(myEditMode == GNE_MODE_SELECT) { 
-            mySelectingArea.processRectangleSelection(this, shiftKeyPressed);
-        } else if(myEditMode == GNE_MODE_TAZ) {  
-            // process edge selection
-            myViewParent->getTAZFrame()->processEdgeSelection(mySelectingArea.processEdgeRectangleSelection(this, myShiftKeyPressed));
+        // check if we're creating a rectangle selection or we want only to select a lane
+        if(mySelectingArea.startDrawing) {
+            // check if we're selecting all type of elements o we only want a set of edges for TAZ
+            if(myEditMode == GNE_MODE_SELECT) { 
+                mySelectingArea.processRectangleSelection(shiftKeyPressed);
+            } else if(myEditMode == GNE_MODE_TAZ) {  
+                // process edge selection
+                myViewParent->getTAZFrame()->processEdgeSelection(mySelectingArea.processEdgeRectangleSelection(myShiftKeyPressed));
+            }
+        } else if(shiftKeyPressed) {
+            // obtain objects under cursor
+            if (makeCurrent()) {
+                // update objects under cursor again
+                myObjectsUnderCursor.updateObjectUnderCursor(getGUIGlObjectsUnderCursor(), myEditShapePoly, evt);
+                makeNonCurrent();
+            }
+            // if we clicked over an lane with shift key pressed, select or unselect it
+            if(myObjectsUnderCursor.getLaneFront()->isAttributeCarrierSelected()) {
+                myObjectsUnderCursor.getLaneFront()->unselectAttributeCarrier();
+            } else {
+                myObjectsUnderCursor.getLaneFront()->selectAttributeCarrier();
+            }
         }
+        // finish selection
+        mySelectingArea.finishRectangleSelection();
     }
     update();
     return 1;
@@ -1375,7 +1295,7 @@ long
 GNEViewNet::onMouseMove(FXObject* obj, FXSelector sel, void* eventData) {
     // process mouse move in GUISUMOAbstractView
     GUISUMOAbstractView::onMouseMove(obj, sel, eventData);
-    // update cursor
+    // first update cursor
     updateCursor((FXEvent*)eventData);
     // update shift key pressed
     myShiftKeyPressed = ((FXEvent*)eventData)->state & SHIFTMASK;
@@ -1384,54 +1304,53 @@ GNEViewNet::onMouseMove(FXObject* obj, FXSelector sel, void* eventData) {
         myViewParent->getPolygonFrame()->getDrawingShapeModul()->setDeleteLastCreatedPoint(myShiftKeyPressed);
     }
     // calculate offset between current position and original position
-    Position offsetMovement = getPositionInformation() - myMoveSingleElementValues.movingOriginalPosition;
-    // calculate Z depending of Grid
-    if (myCreateEdgeValues.menuCheckMoveElevation->shown() && myCreateEdgeValues.menuCheckMoveElevation->getCheck() == TRUE) {
-        // reset offset X and Y and use Y for Z
-        offsetMovement = Position(0, 0, offsetMovement.y());
-    } else {
-        // leave z empty (because in this case offset only actuates over X-Y)
-        offsetMovement.setz(0);
-    }
-    // @note  #3521: Add checkBox to allow moving elements... has to behere implemented
+    Position offsetMovement = myMoveSingleElementValues.calculateOffsetMovement();
     // check what type of additional is moved
     if (myMoveMultipleElementValues.isMovingSelection()) {
+        // move entire selection
         myMoveMultipleElementValues.moveSelection();
     } else if (myMovedItems.polyToMove) {
-        // move shape's geometry without commiting changes
+        // move shape's geometry without commiting changes depending if polygon is blocked
         if (myMovedItems.polyToMove->isPolygonBlocked()) {
-            myMovedItems.polyToMove->moveEntireShape(myMoveSingleElementValues.movingOriginalShape, offsetMovement);
+            // move entire shape
+            myMovedItems.polyToMove->moveEntireShape(myMoveSingleElementValues.originalShapeBeforeMoving, offsetMovement);
         } else {
-            myMoveSingleElementValues.movingIndexShape = myMovedItems.polyToMove->moveVertexShape(myMoveSingleElementValues.movingIndexShape, myMoveSingleElementValues.movingOriginalPosition, offsetMovement);
+            // move only a certain Geometry Point
+            myMoveSingleElementValues.movingIndexShape = myMovedItems.polyToMove->moveVertexShape(myMoveSingleElementValues.movingIndexShape, 
+                                                                                                  myMoveSingleElementValues.originalPositionInView, 
+                                                                                                  offsetMovement);
         }
     } else if (myMovedItems.poiToMove) {
         // Move POI's geometry without commiting changes
-        myMovedItems.poiToMove->moveGeometry(myMoveSingleElementValues.movingOriginalPosition, offsetMovement);
+        myMovedItems.poiToMove->moveGeometry(myMoveSingleElementValues.originalPositionInView, offsetMovement);
     } else if (myMovedItems.junctionToMove) {
         // Move Junction's geometry without commiting changes
-        myMovedItems.junctionToMove->moveGeometry(myMoveSingleElementValues.movingOriginalPosition, offsetMovement);
+        myMovedItems.junctionToMove->moveGeometry(myMoveSingleElementValues.originalPositionInView, offsetMovement);
     } else if (myMovedItems.edgeToMove) {
+        // check if we're moving the start or end position, or a geometry point
         if (myMoveSingleElementValues.movingStartPos) {
-            myMovedItems.edgeToMove->moveShapeStart(myMoveSingleElementValues.movingOriginalPosition, offsetMovement);
+            myMovedItems.edgeToMove->moveShapeStart(myMoveSingleElementValues.originalPositionInView, offsetMovement);
         } else if (myMoveSingleElementValues.movingEndPos) {
-            myMovedItems.edgeToMove->moveShapeEnd(myMoveSingleElementValues.movingOriginalPosition, offsetMovement);
+            myMovedItems.edgeToMove->moveShapeEnd(myMoveSingleElementValues.originalPositionInView, offsetMovement);
         } else {
             // move edge's geometry without commiting changes
-            myMoveSingleElementValues.movingIndexShape = myMovedItems.edgeToMove->moveVertexShape(myMoveSingleElementValues.movingIndexShape, myMoveSingleElementValues.movingOriginalPosition, offsetMovement);
+            myMoveSingleElementValues.movingIndexShape = myMovedItems.edgeToMove->moveVertexShape(myMoveSingleElementValues.movingIndexShape, myMoveSingleElementValues.originalPositionInView, offsetMovement);
         }
     } else if (myMovedItems.additionalToMove && (myMovedItems.additionalToMove->isAdditionalBlocked() == false)) {
         // Move Additional geometry without commiting changes
-        myMovedItems.additionalToMove->moveGeometry(getPositionInformation() - myMoveSingleElementValues.movingOriginalPosition);
+        myMovedItems.additionalToMove->moveGeometry(offsetMovement);
     } else if (myMovedItems.tazToMove) {
-        // move TAZ's geometry without commiting changes
+        /// move TAZ's geometry without commiting changes depending if polygon is blocked
         if (myMovedItems.tazToMove->isShapeBlocked()) {
-            myMovedItems.tazToMove->moveEntireShape(myMoveSingleElementValues.movingOriginalShape, offsetMovement);
+            // move entire shape
+            myMovedItems.tazToMove->moveEntireShape(myMoveSingleElementValues.originalShapeBeforeMoving, offsetMovement);
         } else {
-            myMoveSingleElementValues.movingIndexShape = myMovedItems.tazToMove->moveVertexShape(myMoveSingleElementValues.movingIndexShape, myMoveSingleElementValues.movingOriginalPosition, offsetMovement);
+            // move only a certain Geometry Point
+            myMoveSingleElementValues.movingIndexShape = myMovedItems.tazToMove->moveVertexShape(myMoveSingleElementValues.movingIndexShape, myMoveSingleElementValues.originalPositionInView, offsetMovement);
         }
     } else if (mySelectingArea.selectingUsingRectangle) {
-        mySelectingArea.selectionCorner2 = getPositionInformation();
-        setStatusBarText(mySelectingArea.reportDimensions());
+        // update selection corner of selecting area
+        mySelectingArea.moveRectangleSelection();
     }
     // update view
     update();
@@ -1673,14 +1592,14 @@ GNEViewNet::getMenuCheckShowGrid() const {
 
 
 const GNEAttributeCarrier*
-GNEViewNet::getACUnderCursor() const {
-    return myACUnderCursor;
+GNEViewNet::getDottedAC() const {
+    return myDottedAC;
 }
 
 
 void
-GNEViewNet::setACUnderCursor(const GNEAttributeCarrier* AC) {
-    myACUnderCursor = AC;
+GNEViewNet::setDottedAC(const GNEAttributeCarrier* AC) {
+    myDottedAC = AC;
 }
 
 
@@ -3323,21 +3242,161 @@ GNEViewNet::MovedItems::MovedItems() :
 }
 
 // ---------------------------------------------------------------------------
-// GNEViewNet::MovingGeometryPoint - methods
-// ---------------------------------------------------------------------------
-
-GNEViewNet::MovingGeometryPoint::MovingGeometryPoint() :
-    index(0) {
-}
-
-// ---------------------------------------------------------------------------
 // GNEViewNet::MoveSingleElementValues - methods
 // ---------------------------------------------------------------------------
 
-GNEViewNet::MoveSingleElementValues::MoveSingleElementValues() :
+GNEViewNet::MoveSingleElementValues::MoveSingleElementValues(GNEViewNet* viewNet) :
+    movingIndexShape(-1),
     movingStartPos(false),
     movingEndPos(false),
-    movingIndexShape(-1) {
+    myViewNet(viewNet) {
+}
+
+
+Position 
+GNEViewNet::MoveSingleElementValues::calculateOffsetMovement() const {
+    // calculate offsetMovement depending of current mouse position and relative clicked position
+    // @note  #3521: Add checkBox to allow moving elements... has to be implemented and used here
+    Position offsetMovement = myViewNet->getPositionInformation() - myViewNet->myMoveSingleElementValues.relativeClickedPosition;
+    // calculate Z depending of menuCheckMoveElevation
+    if (myViewNet->myCreateEdgeValues.menuCheckMoveElevation->shown() && myViewNet->myCreateEdgeValues.menuCheckMoveElevation->getCheck() == TRUE) {
+        // reset offset X and Y and use Y for Z
+        offsetMovement = Position(0, 0, offsetMovement.y());
+    } else {
+        // leave z empty (because in this case offset only actuates over X-Y)
+        offsetMovement.setz(0);
+    }
+    return offsetMovement;
+}
+
+
+void 
+GNEViewNet::MoveSingleElementValues::calculatePolyValues() {
+    // set Poly to move
+    myViewNet->myMovedItems.polyToMove = myViewNet->myObjectsUnderCursor.getPolyFront();
+    // now we have two cases: if we're editing the X-Y coordenade or the altitude (z)
+    if (myViewNet->myCreateEdgeValues.menuCheckMoveElevation->shown() && myViewNet->myCreateEdgeValues.menuCheckMoveElevation->getCheck() == TRUE) {
+        // check if in the clicked position a geometry point exist
+        int existentIndex = myViewNet->myMovedItems.polyToMove->getVertexIndex(myViewNet->getPositionInformation(), false);
+        if (existentIndex != -1) {
+            // save original shape (needed for commit change)
+            myViewNet->myMoveSingleElementValues.originalShapeBeforeMoving = myViewNet->myMovedItems.polyToMove->getShape();
+            // obtain existent index
+            myViewNet->myMoveSingleElementValues.movingIndexShape = existentIndex;
+            myViewNet->myMoveSingleElementValues.originalPositionInView = myViewNet->myMovedItems.polyToMove->getShape()[existentIndex];
+        } else {
+            // stop poly moving
+            myViewNet->myMovedItems.polyToMove = nullptr;
+        }
+    } else {
+        // save original shape (needed for commit change)
+        myViewNet->myMoveSingleElementValues.originalShapeBeforeMoving = myViewNet->myMovedItems.polyToMove->getShape();
+        // save clicked position as moving original position
+        myViewNet->myMoveSingleElementValues.originalPositionInView = myViewNet->getPositionInformation();
+        // obtain index of vertex to move if shape isn't blocked
+        if ((myViewNet->myMovedItems.polyToMove->isPolygonBlocked() == false) && (myViewNet->myMovedItems.polyToMove->isMovementBlocked() == false)) {
+            // check if we want to remove a Geometry Point
+            if (myViewNet->myShiftKeyPressed) {
+                // check if we're clicked over a Geometry Point
+                myViewNet->myMoveSingleElementValues.movingIndexShape = myViewNet->myMovedItems.polyToMove->getVertexIndex(myViewNet->myMoveSingleElementValues.originalPositionInView, false);
+                if (myViewNet->myMoveSingleElementValues.movingIndexShape != -1) {
+                    myViewNet->myMovedItems.polyToMove->deleteGeometryPoint(myViewNet->myMoveSingleElementValues.originalPositionInView);
+                    // after removing Geomtery Point, reset PolyToMove
+                    myViewNet->myMovedItems.polyToMove = nullptr;
+                }
+            } else {
+                // obtain index of vertex to move and moving reference
+                myViewNet->myMoveSingleElementValues.movingIndexShape = myViewNet->myMovedItems.polyToMove->getVertexIndex(myViewNet->myMoveSingleElementValues.originalPositionInView);
+            }
+        } else {
+            myViewNet->myMoveSingleElementValues.movingIndexShape = -1;
+        }
+    }
+}
+
+
+void 
+GNEViewNet::MoveSingleElementValues::calculateEdgeValues() {
+    // allways swap getLaneFront()s to getEdgesFront()s in movement mode
+    if (myViewNet->myObjectsUnderCursor.getLaneFront()) {
+        myViewNet->myObjectsUnderCursor.swapLane2Edge();
+    }
+    if (myViewNet->myObjectsUnderCursor.getEdgeFront()->isAttributeCarrierSelected()) {
+        // begin move selection of multiple elements
+        myViewNet->myMoveMultipleElementValues.beginMoveSelection(myViewNet->myObjectsUnderCursor.getEdgeFront());
+    } else if (myViewNet->myObjectsUnderCursor.shiftKeyPressed()) {
+        myViewNet->myObjectsUnderCursor.getEdgeFront()->editEndpoint(myViewNet->getPositionInformation(), myViewNet->myUndoList);
+    } else {
+        // assign clicked edge to edgeToMove
+        myViewNet->myMovedItems.edgeToMove = myViewNet->myObjectsUnderCursor.getEdgeFront();
+        // check if we clicked over a start or end position
+        if (myViewNet->myMovedItems.edgeToMove->clickedOverShapeStart(myViewNet->getPositionInformation())) {
+            // save start pos
+            myViewNet->myMoveSingleElementValues.originalPositionInView = myViewNet->myMovedItems.edgeToMove->getNBEdge()->getGeometry().front();
+            myViewNet->myMoveSingleElementValues.movingStartPos = true;
+            // start geometry moving
+            myViewNet->myMovedItems.edgeToMove->startGeometryMoving();
+        } else if (myViewNet->myMovedItems.edgeToMove->clickedOverShapeEnd(myViewNet->getPositionInformation())) {
+            // save end pos
+            myViewNet->myMoveSingleElementValues.originalPositionInView = myViewNet->myMovedItems.edgeToMove->getNBEdge()->getGeometry().back();
+            myViewNet->myMoveSingleElementValues.movingEndPos = true;
+            // start geometry moving
+            myViewNet->myMovedItems.edgeToMove->startGeometryMoving();
+        } else {
+            // now we have two cases: if we're editing the X-Y coordenade or the altitude (z)
+            if (myViewNet->myCreateEdgeValues.menuCheckMoveElevation->shown() && myViewNet->myCreateEdgeValues.menuCheckMoveElevation->getCheck() == TRUE) {
+                // check if in the clicked position a geometry point exist
+                int existentIndex = myViewNet->myMovedItems.edgeToMove->getVertexIndex(myViewNet->getPositionInformation(), false);
+                if (existentIndex != -1) {
+                    myViewNet->myMoveSingleElementValues.movingIndexShape = existentIndex;
+                    myViewNet->myMoveSingleElementValues.originalPositionInView = myViewNet->myMovedItems.edgeToMove->getNBEdge()->getInnerGeometry()[existentIndex];
+                    // start geometry moving
+                    myViewNet->myMovedItems.edgeToMove->startGeometryMoving();
+                } else {
+                    // stop edge moving
+                    myViewNet->myMovedItems.edgeToMove = nullptr;
+                }
+            } else {
+                // save original shape (needed for commit change)
+                myViewNet->myMoveSingleElementValues.originalShapeBeforeMoving = myViewNet->myMovedItems.edgeToMove->getNBEdge()->getInnerGeometry();
+                // obtain index of vertex to move and moving reference
+                myViewNet->myMoveSingleElementValues.movingIndexShape = myViewNet->myMovedItems.edgeToMove->getVertexIndex(myViewNet->getPositionInformation());
+                myViewNet->myMoveSingleElementValues.originalPositionInView = myViewNet->myMovedItems.edgeToMove->getNBEdge()->getInnerGeometry()[myViewNet->myMoveSingleElementValues.movingIndexShape];
+                // start geometry moving
+                myViewNet->myMovedItems.edgeToMove->startGeometryMoving();
+            }
+        }
+    }
+}
+
+
+void 
+GNEViewNet::MoveSingleElementValues::calculateTAZValues() {
+    // set TAZ to move
+    myViewNet->myMovedItems.tazToMove = myViewNet->myObjectsUnderCursor.getTAZFront();
+    // save original shape (needed for commit change)
+    myViewNet->myMoveSingleElementValues.originalShapeBeforeMoving = myViewNet->myMovedItems.tazToMove->getShape();
+    // save clicked position as moving original position
+    myViewNet->myMoveSingleElementValues.originalPositionInView = myViewNet->getPositionInformation();
+    // obtain index of vertex to move if shape isn't blocked
+    if ((myViewNet->myMovedItems.tazToMove->isShapeBlocked() == false) && (myViewNet->myMovedItems.tazToMove->isAdditionalBlocked() == false)) {
+        // check if we want to remove a Geometry Point
+        if (myViewNet->myShiftKeyPressed) {
+            // check if we're clicked over a Geometry Point
+            myViewNet->myMoveSingleElementValues.movingIndexShape = myViewNet->myMovedItems.tazToMove->getVertexIndex(myViewNet->myMoveSingleElementValues.originalPositionInView, false);
+            if (myViewNet->myMoveSingleElementValues.movingIndexShape != -1) {
+                myViewNet->myMovedItems.tazToMove->deleteGeometryPoint(myViewNet->myMoveSingleElementValues.originalPositionInView);
+                // after removing Geomtery Point, reset PolyToMove
+                myViewNet->myMovedItems.tazToMove = nullptr;
+            }
+        } else {
+            // obtain index of vertex to move and moving reference
+            myViewNet->myMoveSingleElementValues.movingIndexShape = myViewNet->myMovedItems.tazToMove->getVertexIndex(myViewNet->myMoveSingleElementValues.originalPositionInView);
+        }
+    } else {
+        // abort moving index shape
+        myViewNet->myMoveSingleElementValues.movingIndexShape = -1;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3351,7 +3410,7 @@ GNEViewNet::MoveMultipleElementValues::MoveMultipleElementValues(GNEViewNet* vie
 
 
 void
-GNEViewNet::MoveMultipleElementValues::beginMoveSelection(GNEAttributeCarrier* originAC, const Position& originPosition) {
+GNEViewNet::MoveMultipleElementValues::beginMoveSelection(GNEAttributeCarrier* originAC) {
     // enable moving selection
     myMovingSelection = true;
     // save clicked position (to calculate offset)
@@ -3412,26 +3471,36 @@ GNEViewNet::MoveMultipleElementValues::beginMoveSelection(GNEAttributeCarrier* o
             }
             // save original shape of all noJunctionsSelected edges (needed for commit change)
             for (auto i : noJunctionsSelected) {
+                myMovedEgdesGeometryPoints[i] = new MoveSingleElementValues(myViewNet);
                 // save edge geometry
-                myMovedEgdesGeometryPoints[i].originalShape = i->getNBEdge()->getInnerGeometry();
+                myMovedEgdesGeometryPoints[i]->originalShapeBeforeMoving = i->getNBEdge()->getInnerGeometry();
                 // start geometry moving
                 i->startGeometryMoving();
             }
             // obtain index shape of clicked edge
-            int index = clickedEdge->getVertexIndex(originPosition);
-            assert(index >= 0);
+            int index = clickedEdge->getVertexIndex(myViewNet->getPositionInformation());
+            // check that index is valid
+            if (index < 0) {
+                throw ProcessError("invalid shape index");
+            }
             // save index and original position
-            myMovedEgdesGeometryPoints[clickedEdge].index = index;
-            myMovedEgdesGeometryPoints[clickedEdge].originalPosition = myViewNet->getPositionInformation();
+            myMovedEgdesGeometryPoints[clickedEdge] = new MoveSingleElementValues(myViewNet);
+            myMovedEgdesGeometryPoints[clickedEdge]->movingIndexShape = index;
+            myMovedEgdesGeometryPoints[clickedEdge]->originalPositionInView = myViewNet->getPositionInformation();
             // start moving of clicked edge AFTER getting vertex Index
             clickedEdge->startGeometryMoving();
             // do the same for  the rest of noJunctionsSelected edges
             for (auto i : noJunctionsSelected) {
                 if (i != clickedEdge) {
-                    int movingIndex = i->getVertexIndex(originPosition);
+                    myMovedEgdesGeometryPoints[i] = new MoveSingleElementValues(myViewNet);
                     // save index and original position
-                    myMovedEgdesGeometryPoints[i].index = movingIndex;
-                    myMovedEgdesGeometryPoints[i].originalPosition = myViewNet->getPositionInformation();
+                    myMovedEgdesGeometryPoints[i]->movingIndexShape = i->getVertexIndex(myViewNet->getPositionInformation());
+                    // set originalPosition depending if edge is opposite to clicked edge
+                    if (i->getOppositeEdge() == clickedEdge) {
+                        myMovedEgdesGeometryPoints[i]->originalPositionInView = myViewNet->getPositionInformation();
+                    } else {
+                        myMovedEgdesGeometryPoints[i]->originalPositionInView = i->getNBEdge()->getInnerGeometry()[myMovedEgdesGeometryPoints[i]->movingIndexShape];
+                    }
                     // start moving of clicked edge AFTER getting vertex Index
                     i->startGeometryMoving();
                 }
@@ -3463,7 +3532,7 @@ GNEViewNet::MoveMultipleElementValues::moveSelection() {
     }
     // move partial shapes
     for (auto i : myMovedEgdesGeometryPoints) {
-        i.first->moveVertexShape(i.second.index, i.second.originalPosition, offsetMovement);
+        i.first->moveVertexShape(i.second->movingIndexShape, i.second->originalPositionInView, offsetMovement);
     }
 }
 
@@ -3477,17 +3546,15 @@ GNEViewNet::MoveMultipleElementValues::finishMoveSelection() {
         i.first->endGeometryMoving();
         i.first->commitGeometryMoving(i.second, myViewNet->getUndoList());
     }
-
     // commit shapes of entired moved edges
     for (auto i : myMovedEdgesOriginShape) {
         i.first->endGeometryMoving();
         i.first->commitShapeChange(i.second, myViewNet->getUndoList());
     }
-
     //commit shapes of partial moved shapes
     for (auto i : myMovedEgdesGeometryPoints) {
         i.first->endGeometryMoving();
-        i.first->commitShapeChange(i.second.originalShape, myViewNet->getUndoList());
+        i.first->commitShapeChange(i.second->originalShapeBeforeMoving, myViewNet->getUndoList());
     }
     // end undo list
     myViewNet->getUndoList()->p_end();
@@ -3496,6 +3563,10 @@ GNEViewNet::MoveMultipleElementValues::finishMoveSelection() {
     // clear containers
     myMovedJunctionOriginPositions.clear();
     myMovedEdgesOriginShape.clear();
+    // delete all movedEgdesGeometryPoints before clear container
+    for (const auto &i : myMovedEgdesGeometryPoints) {
+        delete i.second;
+    }
     myMovedEgdesGeometryPoints.clear();
 }
 
@@ -3509,14 +3580,44 @@ GNEViewNet::MoveMultipleElementValues::isMovingSelection() const {
 // GNEViewNet::SelectingArea - methods
 // ---------------------------------------------------------------------------
 
-GNEViewNet::SelectingArea::SelectingArea() :
-    selectingUsingRectangle(false) {
+GNEViewNet::SelectingArea::SelectingArea(GNEViewNet* viewNet) :
+    selectingUsingRectangle(false),
+    startDrawing(false), 
+    myViewNet(viewNet) {
+}
+
+
+void 
+GNEViewNet::SelectingArea::beginRectangleSelection() {
+    selectingUsingRectangle = true;
+    selectionCorner1 = myViewNet->getPositionInformation();
+    selectionCorner2 = selectionCorner1;
+}
+
+
+void 
+GNEViewNet::SelectingArea::moveRectangleSelection() {
+    // start drawing
+    startDrawing = true;
+    // only update selection corner 2
+    selectionCorner2 = myViewNet->getPositionInformation();
+    // update status bar
+    myViewNet->setStatusBarText("Selection width:" + toString(fabs(selectionCorner1.x() - selectionCorner2.x()))
+        + " height:" + toString(fabs(selectionCorner1.y() - selectionCorner2.y()))
+        + " diagonal:" + toString(selectionCorner1.distanceTo2D(selectionCorner2)));
+}
+
+
+void 
+GNEViewNet::SelectingArea::finishRectangleSelection() {
+    // finish rectangle selection
+    selectingUsingRectangle = false;
+    startDrawing = false;
 }
 
 
 void
-GNEViewNet::SelectingArea::processRectangleSelection(GNEViewNet* viewNet, bool shiftKeyPressed) {
-    selectingUsingRectangle = false;
+GNEViewNet::SelectingArea::processRectangleSelection(bool shiftKeyPressed) {
     // shift held down on mouse-down and mouse-up and check that rectangle exist
     if ((abs(selectionCorner1.x() - selectionCorner2.x()) > 0.01) && 
         (abs(selectionCorner1.y() - selectionCorner2.y()) > 0.01) &&
@@ -3526,16 +3627,15 @@ GNEViewNet::SelectingArea::processRectangleSelection(GNEViewNet* viewNet, bool s
         rectangleBoundary.add(selectionCorner1);
         rectangleBoundary.add(selectionCorner2);
         // process selection within boundary
-        processBoundarySelection(viewNet, rectangleBoundary);
+        processBoundarySelection(rectangleBoundary);
     }
 }
 
 
 std::vector<GNEEdge*>
-GNEViewNet::SelectingArea::processEdgeRectangleSelection(GNEViewNet* viewNet, bool shiftKeyPressed) {
+GNEViewNet::SelectingArea::processEdgeRectangleSelection(bool shiftKeyPressed) {
+    // declare vector for selection
     std::vector<GNEEdge*> result;
-    // stop select using rectangle
-    selectingUsingRectangle = false;
     // shift held down on mouse-down and mouse-up and check that rectangle exist
     if ((abs(selectionCorner1.x() - selectionCorner2.x()) > 0.01) && 
         (abs(selectionCorner1.y() - selectionCorner2.y()) > 0.01) &&
@@ -3544,16 +3644,16 @@ GNEViewNet::SelectingArea::processEdgeRectangleSelection(GNEViewNet* viewNet, bo
         Boundary rectangleBoundary;
         rectangleBoundary.add(selectionCorner1);
         rectangleBoundary.add(selectionCorner2);
-        if (viewNet->makeCurrent()) {
+        if (myViewNet->makeCurrent()) {
             // obtain all ACs in Rectangle BOundary
-            std::set<std::pair<std::string, GNEAttributeCarrier*> > ACsInBoundary = viewNet->getAttributeCarriersInBoundary(rectangleBoundary);
+            std::set<std::pair<std::string, GNEAttributeCarrier*> > ACsInBoundary = myViewNet->getAttributeCarriersInBoundary(rectangleBoundary);
             // Filter ACs in Boundary and get only edges
             for (auto i : ACsInBoundary) {
                 if(i.second->getTagProperty().getTag() == SUMO_TAG_EDGE) {
                     result.push_back(dynamic_cast<GNEEdge*>(i.second));
                 }
             }
-            viewNet->makeNonCurrent();
+            myViewNet->makeNonCurrent();
         }
     }
     return result;
@@ -3561,16 +3661,8 @@ GNEViewNet::SelectingArea::processEdgeRectangleSelection(GNEViewNet* viewNet, bo
 
 
 void 
-GNEViewNet::SelectingArea::processShapeSelection(GNEViewNet* viewNet, const PositionVector &shape) {
-    processBoundarySelection(viewNet, shape.getBoxBoundary());
-}
-
-
-std::string
-GNEViewNet::SelectingArea::reportDimensions() {
-    return ("Selection width:" + toString(fabs(selectionCorner1.x() - selectionCorner2.x()))
-            + " height:" + toString(fabs(selectionCorner1.y() - selectionCorner2.y()))
-            + " diagonal:" + toString(selectionCorner1.distanceTo2D(selectionCorner2)));
+GNEViewNet::SelectingArea::processShapeSelection(const PositionVector &shape) {
+    processBoundarySelection(shape.getBoxBoundary());
 }
 
 
@@ -3594,9 +3686,9 @@ GNEViewNet::SelectingArea::drawRectangleSelection(const RGBColor& color) const {
 
 
 void 
-GNEViewNet::SelectingArea::processBoundarySelection(GNEViewNet* viewNet, Boundary boundary) {
-    if (viewNet->makeCurrent()) {
-        std::set<std::pair<std::string, GNEAttributeCarrier*> > ACsInBoundary = viewNet->getAttributeCarriersInBoundary(boundary);
+GNEViewNet::SelectingArea::processBoundarySelection(const Boundary &boundary) {
+    if (myViewNet->makeCurrent()) {
+        std::set<std::pair<std::string, GNEAttributeCarrier*> > ACsInBoundary = myViewNet->getAttributeCarriersInBoundary(boundary);
         // declare two sets of attribute carriers, one for select and another for unselect
         std::vector<GNEAttributeCarrier*> ACToSelect;
         std::vector<GNEAttributeCarrier*> ACToUnselect;
@@ -3604,15 +3696,15 @@ GNEViewNet::SelectingArea::processBoundarySelection(GNEViewNet* viewNet, Boundar
         ACToSelect.reserve(ACsInBoundary.size());
         ACToUnselect.reserve(ACsInBoundary.size());
         // in restrict AND replace mode all current selected attribute carriers will be unselected
-        if ((viewNet->myViewParent->getSelectorFrame()->getModificationModeModul()->getModificationMode() == GNESelectorFrame::ModificationMode::SET_RESTRICT) ||
-                (viewNet->myViewParent->getSelectorFrame()->getModificationModeModul()->getModificationMode() == GNESelectorFrame::ModificationMode::SET_REPLACE)) {
-            for (auto i : viewNet->myNet->getSelectedAttributeCarriers()) {
+        if ((myViewNet->myViewParent->getSelectorFrame()->getModificationModeModul()->getModificationMode() == GNESelectorFrame::ModificationMode::SET_RESTRICT) ||
+                (myViewNet->myViewParent->getSelectorFrame()->getModificationModeModul()->getModificationMode() == GNESelectorFrame::ModificationMode::SET_REPLACE)) {
+            for (auto i : myViewNet->myNet->getSelectedAttributeCarriers()) {
                 ACToUnselect.push_back(i);
             }
         }
         // iterate over AtributeCarriers obtained of boundary an place it in ACToSelect or ACToUnselect
         for (auto i : ACsInBoundary) {
-            switch (viewNet->myViewParent->getSelectorFrame()->getModificationModeModul()->getModificationMode()) {
+            switch (myViewNet->myViewParent->getSelectorFrame()->getModificationModeModul()->getModificationMode()) {
                 case GNESelectorFrame::ModificationMode::SET_SUB:
                     ACToUnselect.push_back(i.second);
                     break;
@@ -3627,7 +3719,7 @@ GNEViewNet::SelectingArea::processBoundarySelection(GNEViewNet* viewNet, Boundar
             }
         }
         // select junctions and their connections and crossings if Auto select junctions is enabled (note: only for "add mode")
-        if (viewNet->autoSelectNodes() && GNESelectorFrame::ModificationMode::SET_ADD) {
+        if (myViewNet->autoSelectNodes() && GNESelectorFrame::ModificationMode::SET_ADD) {
             std::vector<GNEEdge*> edgesToSelect;
             // iterate over ACToSelect and extract edges
             for (auto i : ACToSelect) {
@@ -3658,18 +3750,18 @@ GNEViewNet::SelectingArea::processBoundarySelection(GNEViewNet* viewNet, Boundar
         // only continue if there is ACs to select or unselect
         if ((ACToSelect.size() + ACToUnselect.size()) > 0) {
             // first unselect AC of ACToUnselect and then selects AC of ACToSelect
-            viewNet->myUndoList->p_begin("selection using rectangle");
+            myViewNet->myUndoList->p_begin("selection using rectangle");
             for (auto i : ACToUnselect) {
-                i->setAttribute(GNE_ATTR_SELECTED, "0", viewNet->myUndoList);
+                i->setAttribute(GNE_ATTR_SELECTED, "0", myViewNet->myUndoList);
             }
             for (auto i : ACToSelect) {
                 if (i->getTagProperty().isSelectable()) {
-                    i->setAttribute(GNE_ATTR_SELECTED, "1", viewNet->myUndoList);
+                    i->setAttribute(GNE_ATTR_SELECTED, "1", myViewNet->myUndoList);
                 }
             }
-            viewNet->myUndoList->p_end();
+            myViewNet->myUndoList->p_end();
         }
-        viewNet->makeNonCurrent();
+        myViewNet->makeNonCurrent();
     }
 }
 
@@ -3677,11 +3769,82 @@ GNEViewNet::SelectingArea::processBoundarySelection(GNEViewNet* viewNet, Boundar
 // GNEViewNet::TestingMode - methods
 // ---------------------------------------------------------------------------
 
-GNEViewNet::TestingMode::TestingMode() :
-    testingEnabled(OptionsCont::getOptions().getBool("gui-testing")),
-    drawRefSquare(false),
-    testingWidth(0),
-    testingHeight(0) {
+GNEViewNet::TestingMode::TestingMode(GNEViewNet* viewNet) :
+    myViewNet(viewNet),
+    myTestingEnabled(OptionsCont::getOptions().getBool("gui-testing")),
+    myTestingWidth(0),
+    myTestingHeight(0) {
+}
+
+
+void
+GNEViewNet::TestingMode::initTestingMode() {
+    // first check if testing mode is enabled and window size is correct
+    if (myTestingEnabled && OptionsCont::getOptions().isSet("window-size")) {
+        std::vector<std::string> windowSize = OptionsCont::getOptions().getStringVector("window-size");
+        // make sure that given windows size has exactly two valid int values
+        if ((windowSize.size() == 2) && GNEAttributeCarrier::canParse<int>(windowSize[0]) && GNEAttributeCarrier::canParse<int>(windowSize[1])) {
+            myTestingWidth = GNEAttributeCarrier::parse<int>(windowSize[0]);
+            myTestingHeight = GNEAttributeCarrier::parse<int>(windowSize[1]);
+        } else {
+            WRITE_ERROR("Invalid windows size-format: " + toString(windowSize) + "for option 'window-size'");
+        }
+    }
+}
+
+
+void
+GNEViewNet::TestingMode::drawTestingElements(GUIMainWindow* mainWindow) {
+    // first check if testing mode is neabled
+    if (myTestingEnabled) {
+        // check if main windows has to be resized
+        if (myTestingWidth > 0 && ((myViewNet->getWidth() != myTestingWidth) || (myViewNet->getHeight() != myTestingHeight))) {
+            // only resize once to avoid flickering
+            //std::cout << " before resize: view=" << getWidth() << ", " << getHeight() << " app=" << mainWindow->getWidth() << ", " << mainWindow->getHeight() << "\n";
+            mainWindow->resize(myTestingWidth + myTestingWidth - myViewNet->getWidth(), myTestingHeight + myTestingHeight - myViewNet->getHeight());
+            //std::cout << " directly after resize: view=" << getWidth() << ", " << getHeight() << " app=" << mainWindow->getWidth() << ", " << mainWindow->getHeight() << "\n";
+            myTestingWidth = 0;
+        }
+        //std::cout << " fixed: view=" << getWidth() << ", " << getHeight() << " app=" << mainWindow->getWidth() << ", " << mainWindow->getHeight() << "\n";
+        // draw pink square in the upper left corner on top of everything
+        glPushMatrix();
+        const double size = myViewNet->p2m(32);
+        Position center = myViewNet->screenPos2NetPos(8, 8);
+        GLHelper::setColor(RGBColor::MAGENTA);
+        glTranslated(center.x(), center.y(), GLO_MAX - 1);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glBegin(GL_QUADS);
+        glVertex2d(0, 0);
+        glVertex2d(0, -size);
+        glVertex2d(size, -size);
+        glVertex2d(size, 0);
+        glEnd();
+        glPopMatrix();
+        glPushMatrix();
+        // show box with the current position relative to pink square
+        Position posRelative = myViewNet->screenPos2NetPos(myViewNet->getWidth() - 40, myViewNet->getHeight() - 20);
+        // adjust cursor position (24,25) to show exactly the same position as in function netedit.leftClick(match, X, Y)
+        GLHelper::drawTextBox(toString(myViewNet->myWindowCursorPositionX - 24) + " " + toString(myViewNet->myWindowCursorPositionY - 25), posRelative, GLO_MAX - 1, myViewNet->p2m(20), RGBColor::BLACK, RGBColor::WHITE);
+        glPopMatrix();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// GNEViewNet::CreateEdgeValues - methods
+// ---------------------------------------------------------------------------
+
+GNEViewNet::CreateEdgeValues::CreateEdgeValues() : 
+    createEdgeSource(nullptr) {
+}
+
+
+void
+GNEViewNet::CreateEdgeValues::hideCheckBoxs() {
+    chainCreateEdge->hide();
+    autoCreateOppositeEdge->hide();
+    menuCheckWarnAboutMerge->hide();
+    menuCheckShowBubbleOverJunction->hide();
+    menuCheckMoveElevation->hide();
 }
 
 // ---------------------------------------------------------------------------

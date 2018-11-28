@@ -498,10 +498,10 @@ public:
     FXMenuCheck* getMenuCheckShowGrid() const;
 
     /// @brief get AttributeCarrier under cursor
-    const GNEAttributeCarrier* getACUnderCursor() const;
+    const GNEAttributeCarrier* getDottedAC() const;
 
     /// @brief set attributeCarrier under cursor
-    void setACUnderCursor(const GNEAttributeCarrier* AC);
+    void setDottedAC(const GNEAttributeCarrier* AC);
 
     /// @brief check if lock icon should be visible
     bool showLockIcon() const;
@@ -539,9 +539,6 @@ public:
     /// @brief edit edit shape
     void stopEditCustomShape();
 
-    /// @brief enable drawing of the reference square when testing
-    void enableReferenceSquare();
-
 protected:
     /// @brief FOX needs this
     GNEViewNet();
@@ -578,43 +575,43 @@ private:
         GNETAZ* tazToMove;
     };
 
-    /// @brief struct used for moving geometry points
-    struct MovingGeometryPoint {
-
-        /// @brief constructor
-        MovingGeometryPoint();
-
-        /// @brief original shape
-        PositionVector originalShape;
-
-        /// @brief index moved
-        int index;
-
-        /// @brief original position of Index
-        Position originalPosition;
-    };
-
     /// @brief struct used to group all variables related with movement of single elements
     struct MoveSingleElementValues {
 
         /// @brief constructor
-        MoveSingleElementValues();
+        MoveSingleElementValues(GNEViewNet* viewNet);
 
-        /// @brief variable for calculating moving offset (Used when user doesn't click exactly over the center of shape)
-        Position movingReference;
+        /// @brief calculate offset movement
+        Position calculateOffsetMovement() const;
 
-        /// @brief original Position of element before moving (needed for commmit position changes)
-        Position movingOriginalPosition;
+        /// calculate Poly movement values (Position, Index, etc.)
+        void calculatePolyValues();
 
-        /// @brief Shape of elements before moving (needed for commmit shape changes)
-        PositionVector movingOriginalShape;
+        /// calculate Edge movement values (Position, Index, etc.)
+        void calculateEdgeValues();
+
+        /// calculate TAZ movement values (Position, Index, etc.)
+        void calculateTAZValues();
+
+        /// @brief original shape of element before start moving (used by polygons, edges, etc., needed for commmit position changes)
+        PositionVector originalShapeBeforeMoving;
+
+        /// @brief index moved
+        int movingIndexShape;
+
+        /// @brief original position of geometry position (needed for commmit position changes)
+        Position originalPositionInView;
+
+        /// @brief relative position of Clicked Position regarding to originalGeometryPointPosition (Used when user doesn't click exactly over the center of element)
+        Position relativeClickedPosition;
 
         /// @brief bool to indicate that startPos are being moved
         bool movingStartPos;
         bool movingEndPos;
 
-        /// @brief current index of shape that are being moved
-        int movingIndexShape;
+    private:
+        /// @brief pointer to viewNet
+        GNEViewNet* myViewNet;
     };
 
     /// @brief struct used to group all variables related with movement of groups of elements
@@ -624,7 +621,7 @@ private:
         MoveMultipleElementValues(GNEViewNet* viewNet);
 
         /// @brief begin move selection
-        void beginMoveSelection(GNEAttributeCarrier* originAC, const Position& originPosition);
+        void beginMoveSelection(GNEAttributeCarrier* originAC);
 
         /// @brief move selection
         void moveSelection();
@@ -652,7 +649,7 @@ private:
         std::map<GNEEdge*, PositionVector> myMovedEdgesOriginShape;
     
         /// @brief container used for move GeometryPoints of edges
-        std::map<GNEEdge*, MovingGeometryPoint> myMovedEgdesGeometryPoints;
+        std::map<GNEEdge*, MoveSingleElementValues*> myMovedEgdesGeometryPoints;
     };
 
     /// @brief struct used to group all variables related with selecting using a square or polygon
@@ -660,19 +657,38 @@ private:
     struct SelectingArea {
 
         /// @brief default constructor
-        SelectingArea();
+        SelectingArea(GNEViewNet* viewNet);
+
+        /// @brief begin rectangle selection
+        void beginRectangleSelection();
+
+        /// @brief move rectangle selection
+        void moveRectangleSelection();
+
+        /// @brief finish rectangle selection
+        void finishRectangleSelection();
 
         /// @brief process rectangle Selection
-        void processRectangleSelection(GNEViewNet* viewNet, bool shiftKeyPressed);
+        void processRectangleSelection(bool shiftKeyPressed);
 
         /// @brief process rectangle Selection (only limited to Edges)
-        std::vector<GNEEdge*> processEdgeRectangleSelection(GNEViewNet* viewNet, bool shiftKeyPressed);
+        std::vector<GNEEdge*> processEdgeRectangleSelection(bool shiftKeyPressed);
 
         /// @brief process shape selection
-        void processShapeSelection(GNEViewNet* viewNet, const PositionVector &shape);
+        void processShapeSelection(const PositionVector &shape);
+        
+        /// @brief draw rectangle selection
+        void drawRectangleSelection(const RGBColor& color) const;
 
         /// @brief whether we have started rectangle-selection
         bool selectingUsingRectangle;
+                
+        /// @brief whether we have started rectangle-selection
+        bool startDrawing;
+
+    private:
+        /// @brief Process boundary Selection
+        void processBoundarySelection(const Boundary &boundary);
 
         /// @brief firstcorner of the rectangle-selection
         Position selectionCorner1;
@@ -680,34 +696,62 @@ private:
         /// @brief second corner of the rectangle-selection
         Position selectionCorner2;
 
-        /// @brief inform about selection size
-        std::string reportDimensions();
-
-        /// @brief draw rectangle selection
-        void drawRectangleSelection(const RGBColor& color) const;
-
-    private:
-        /// @brief Process boundary Selection
-        void processBoundarySelection(GNEViewNet* viewNet, Boundary boundary);
+        /// @brief pointer to viewNet
+        GNEViewNet* myViewNet;
     };
 
     /// @brief struct used to group all variables related with testing
     struct TestingMode {
 
         /// @brief default constructor
-        TestingMode();
+        TestingMode(GNEViewNet* viewNet);
+
+        /// @brief init testing mode
+        void initTestingMode();
+
+        /// @brief draw testing element
+        void drawTestingElements(GUIMainWindow* mainWindow);
+
+    private:
+        /// @brief pointer to viewNet
+        GNEViewNet* myViewNet;
 
         /// @brief flag to enable or disable testing mode
-        bool testingEnabled;
-
-        /// @brief flag to enable or disable magenta reference square
-        bool drawRefSquare;
+        bool myTestingEnabled;
 
         /// @brief Width of viewNet in testing mode
-        int testingWidth;
+        int myTestingWidth;
 
         /// @brief Height of viewNet in testing mode
-        int testingHeight;
+        int myTestingHeight;
+    };
+
+    /// @brief struct used to group all variables related to create edges
+    struct CreateEdgeValues {
+
+        /// @brief default constructor
+        CreateEdgeValues();
+
+        /// @brief hide all MenuChecks
+        void hideCheckBoxs();
+
+        /// @brief source junction for new edge 0 if no edge source is selected an existing (or newly created) junction otherwise
+        GNEJunction* createEdgeSource;
+
+        /// @brief whether the endpoint for a created edge should be set as the new source
+        FXMenuCheck* chainCreateEdge;
+
+        /// @brief create auto create opposite edge
+        FXMenuCheck* autoCreateOppositeEdge;
+
+        /// @brief whether we should warn about merging junctions
+        FXMenuCheck* menuCheckWarnAboutMerge;
+
+        /// @brief show connection as buuble in "Move" mode.
+        FXMenuCheck* menuCheckShowBubbleOverJunction;
+
+        /// @brief apply movement to elevation
+        FXMenuCheck* menuCheckMoveElevation;
     };
 
     /// @brief struct used to group all variables related to create edges
@@ -847,8 +891,10 @@ private:
     /// @brief a reference to the undolist maintained in the application
     GNEUndoList* myUndoList;
 
-    /// @brief current AttributeCarrier under Mouse position
-    const GNEAttributeCarrier* myACUnderCursor;
+    /**@brief current AttributeCarrier that is drawn using with a dotted contour 
+     * note: it's constant because is edited from constant functions (example: drawGL(...) const)
+     */
+    const GNEAttributeCarrier* myDottedAC;
 
     /// @name variables for edit shapes
     /// @{

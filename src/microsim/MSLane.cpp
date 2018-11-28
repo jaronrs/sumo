@@ -2287,6 +2287,7 @@ MSLane::getLeaderOnConsecutive(double dist, double seen, double speed, const MSV
             gDebugFlag1 = true;
         }
 #endif
+        const bool laneChanging = veh.getLane() != this;
         const MSLink::LinkLeaders linkLeaders = (*link)->getLeaderInfo(&veh, seen);
 #ifdef DEBUG_CONTEXT
         gDebugFlag1 = false;
@@ -2311,7 +2312,8 @@ MSLane::getLeaderOnConsecutive(double dist, double seen, double speed, const MSV
                               << "\n";
                 }
 #endif
-                if (lVeh != nullptr && !veh.isLeader(*link, lVeh)) {
+                // in the context of lane-changing, all candidates are leaders
+                if (lVeh != nullptr && !laneChanging && !veh.isLeader(*link, lVeh)) {
                     continue;
                 }
                 if (gap < shortestGap) {
@@ -2960,7 +2962,10 @@ MSLane::getFollowersOnConsecutive(const MSVehicle* ego, double backOffset,
     const double egoPos = backOffset + ego->getVehicleType().getLength();
 #ifdef DEBUG_CONTEXT
     if (DEBUG_COND2(ego)) {
-        std::cout << SIMTIME << " getFollowers lane=" << getID() << " ego=" << ego->getID() << " pos=" << egoPos << "\n";
+        std::cout << SIMTIME << " getFollowers lane=" << getID() << " ego=" << ego->getID()
+            << " backOffset=" << backOffset << " pos=" << egoPos
+            << " allSub=" << allSublanes << " searchDist=" << searchDist << " ignoreMinor=" << ignoreMinorLinks
+            << "\n";
     }
 #endif
     assert(ego != 0);
@@ -3011,9 +3016,34 @@ MSLane::getFollowersOnConsecutive(const MSVehicle* ego, double backOffset,
                 MSLeaderInfo firstFront = next->getFirstVehicleInformation(nullptr, 0, true);
 #ifdef DEBUG_CONTEXT
                 if (DEBUG_COND2(ego)) {
-                    std::cout << "   next=" << next->getID() << " first=" << first.toString() << " firstFront=" << firstFront.toString() << "\n";
+                    std::cout << "   next=" << next->getID() << " seen=" << (*it).length << " first=" << first.toString() << " firstFront=" << firstFront.toString() << "\n";
+                    gDebugFlag1 = true; // for calling getLeaderInfo
                 }
 #endif
+                if (backOffset + (*it).length - next->getLength() < 0) {
+                    // check for junction foes that would interfere with lane changing
+                    const MSLink::LinkLeaders linkLeaders = (*it).viaLink->getLeaderInfo(ego, -backOffset);
+                    for (const auto& ll : linkLeaders) {
+                        if (ll.vehAndGap.first != nullptr) {
+                            const bool egoIsLeader = ll.vehAndGap.first->isLeader((*it).viaLink, ego);
+                            const double gap = egoIsLeader ? NUMERICAL_EPS : ll.vehAndGap.second;
+                            result.addFollower(ll.vehAndGap.first, ego, gap);
+#ifdef DEBUG_CONTEXT
+                            if (DEBUG_COND2(ego)) {
+                                std::cout << SIMTIME << " ego=" << ego->getID() << "    link=" << (*it).viaLink->getViaLaneOrLane()->getID()
+                                    << " (3) added veh=" << Named::getIDSecure(ll.vehAndGap.first)
+                                    << " gap=" << ll.vehAndGap.second << " dtC=" << ll.distToCrossing
+                                    << " egoIsLeader=" << egoIsLeader << " gap2=" << gap
+                                    << "\n";
+                            }
+#endif
+                        }
+                    }
+                }
+#ifdef DEBUG_CONTEXT
+                if (DEBUG_COND2(ego)) gDebugFlag1 = false;
+#endif
+
                 for (int i = 0; i < first.numSublanes(); ++i) {
                     // NOTE: I added this because getFirstVehicleInformation() returns the ego as first if it partially laps into next.
                     // EDIT: Disabled the previous changes (see commented code in next line and fourth upcoming) as I realized that this
@@ -3031,7 +3061,12 @@ MSLane::getFollowersOnConsecutive(const MSVehicle* ego, double backOffset,
                             agap = (*it).length - next->getLength() + backOffset
                                    /// XXX dubious term. here for backwards compatibility
                                    - v->getVehicleType().getMinGap();
-                            if (agap > 0) {
+#ifdef DEBUG_CONTEXT
+                            if (DEBUG_COND2(ego)) {
+                                std::cout << "    agap1=" << agap << "\n";
+                            }
+#endif
+                            if (agap > 0 && &v->getLane()->getEdge() != &ego->getLane()->getEdge()) {
                                 // Only if ego overlaps we treat v as if it were a real follower
                                 // Otherwise we ignore it and look for another follower
                                 v = firstFront[i];

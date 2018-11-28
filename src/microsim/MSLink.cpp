@@ -925,7 +925,7 @@ MSLink::getLeaderInfo(const MSVehicle* ego, double dist, std::vector<const MSPer
     // or it must be queried by the pedestrian model (ego == 0)
     if (fromInternalLane() || ego == nullptr) {
         if (gDebugFlag1) {
-            std::cout << SIMTIME << " getLeaderInfo link=" << getViaLaneOrLane()->getID() << "\n";
+            std::cout << SIMTIME << " getLeaderInfo link=" << getViaLaneOrLane()->getID() << " dist=" << dist << " isShadowLink=" << isShadowLink << "\n";
         }
         // this is an exit link
         for (int i = 0; i < (int)myFoeLanes.size(); ++i) {
@@ -939,12 +939,15 @@ MSLink::getLeaderInfo(const MSVehicle* ego, double dist, std::vector<const MSPer
             if (gDebugFlag1) {
                 std::cout << " distToCrossing=" << distToCrossing << " foeLane=" << foeLane->getID() << " cWidth=" << crossingWidth
                           << " ijl=" << isInternalJunctionLink() << " sT=" << sameTarget << " sS=" << sameSource
+                          << " lbc=" << myLengthsBehindCrossing[i].first
+                          << " flbc=" << myLengthsBehindCrossing[i].second
                           << "\n";
             }
             // special treatment of contLane foe only applies if this lane is not a contLane or contLane follower itself
             const bool contLane = (foeLane->getLinkCont()[0]->getViaLaneOrLane()->getEdge().isInternal() && !(
                                        isInternalJunctionLink() || isExitLinkAfterInternalJunction()));
-            if (distToCrossing + crossingWidth < 0) {
+            if (distToCrossing + crossingWidth < 0
+                    && (ego == nullptr || !MSGlobals::gComputeLC || distToCrossing + crossingWidth + ego->getVehicleType().getLength() < 0)) {
                 continue; // vehicle is behind the crossing point, continue with next foe lane
             }
             const double foeDistToCrossing = foeLane->getLength() - myLengthsBehindCrossing[i].second;
@@ -983,7 +986,8 @@ MSLink::getLeaderInfo(const MSVehicle* ego, double dist, std::vector<const MSPer
                     continue;
                 }
                 // after entering the conflict area, ignore foe vehicles that are not in the way
-                if (distToCrossing < -POSITION_EPS && !inTheWay) {
+                if (distToCrossing < -POSITION_EPS && !inTheWay
+                        && (ego == nullptr || !MSGlobals::gComputeLC || distToCrossing < -ego->getVehicleType().getLength())) {
                     continue;
                 }
                 // ignore foe vehicles that will not pass
@@ -1028,7 +1032,7 @@ MSLink::getLeaderInfo(const MSVehicle* ego, double dist, std::vector<const MSPer
                             // or there is no crossing point
                             continue; // next vehicle
                         }
-                        gap = distToCrossing - ego->getVehicleType().getMinGap() - ((sameTarget || sameSource) ? leaderBackDist : 0);
+                        gap = distToCrossing - ego->getVehicleType().getMinGap() - leaderBackDist - foeCrossingWidth;
                     }
                     // if the foe is already moving off the intersection, we may
                     // advance up to the crossing point unless we have the same target or same source
