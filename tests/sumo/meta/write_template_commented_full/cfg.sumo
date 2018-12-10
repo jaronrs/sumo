@@ -207,9 +207,6 @@
         <!-- Whether to use ballistic method for the positional update of vehicles (default is a semi-implicit Euler method). -->
         <step-method.ballistic value="false" type="BOOL"/>
 
-        <!-- Defines the number of threads for parallel simulation -->
-        <threads value="1" type="INT"/>
-
         <!-- Defines the resolution in m when handling lateral positioning within a lane (with -1 all vehicles drive at the center of their lane -->
         <lateral-resolution value="-1" type="FLOAT"/>
 
@@ -552,6 +549,18 @@
         <!-- Deceleration rate applied during a &apos;minimum risk maneuver&apos;. -->
         <device.toc.mrmDecel value="1.5" type="FLOAT"/>
 
+        <!-- Timegap for ToC preparation phase. -->
+        <device.toc.ogNewTimeHeadway value="-1" type="FLOAT"/>
+
+        <!-- Additional spacing for ToC preparation phase. -->
+        <device.toc.ogNewSpaceHeadway value="-1" type="FLOAT"/>
+
+        <!-- Maximal deceleration applied for establishing increased gap in ToC preparation phase. -->
+        <device.toc.ogMaxDecel value="-1" type="FLOAT"/>
+
+        <!-- Rate of adaptation towards the increased headway during ToC preparation. -->
+        <device.toc.ogChangeRate value="-1" type="FLOAT"/>
+
         <!-- Whether a coloring scheme shall by applied to indicate the different ToC stages. -->
         <device.toc.useColorScheme value="true" type="BOOL"/>
 
@@ -686,9 +695,6 @@
 
         <!-- Initialises the random number generator with the given value -->
         <seed value="23423" synonymes="srand" type="INT"/>
-
-        <!-- Number of pre-allocated random number generators to ensure repeatable multi-threaded simulations. This number should be at least as high as the number of threads. Simulations with the same seend and the same number of thread-rngs will produce the same result -->
-        <thread-rngs value="64" type="INT"/>
 
     </random_number>
 
