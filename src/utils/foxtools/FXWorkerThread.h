@@ -105,7 +105,7 @@ public:
                 const auto end = std::chrono::high_resolution_clock::now();
                 timeDiff += std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
             }
-            std::cout << ("Average cost of a timing call (in ns): " + toString(timeDiff / 100.)) << std::endl;
+            //std::cout << ("Average cost of a timing call (in ns): " + toString(timeDiff / 100.)) << std::endl;
 #endif
             while (numThreads > 0) {
                 new FXWorkerThread(*this);
