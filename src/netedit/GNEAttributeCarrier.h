@@ -151,6 +151,9 @@ public:
         /// @brief return true if atribute is a string
         bool isString() const;
 
+		/// @brief return true if atribute is a position
+        bool isposition() const;
+
         /// @brief return true if atribute is a probability
         bool isProbability() const;
 
@@ -236,7 +239,7 @@ public:
         TAGPROPERTY_DRAWABLE =            1 << 7,   // Element can be drawed in view
         TAGPROPERTY_BLOCKMOVEMENT =       1 << 8,   // Element can block their movement
         TAGPROPERTY_BLOCKSHAPE =          1 << 9,   // Element can block their shape
-        TAGPROPERTY_CLOSESHAPE =          1 << 10,   // Element can close their shape
+        TAGPROPERTY_CLOSESHAPE =          1 << 10,  // Element can close their shape
         TAGPROPERTY_GEOPOSITION =         1 << 11,  // Element's position can be defined using a GEO position
         TAGPROPERTY_GEOSHAPE =            1 << 12,  // Element's shape acn be defined using a GEO Shape
         TAGPROPERTY_DIALOG =              1 << 13,  // Element can be edited using a dialog (GNECalibratorDialog, GNERerouterDialog...)
@@ -255,6 +258,7 @@ public:
         TAGPROPERTY_PLACEDOVER_JUNCTION = 1 << 26,  // Element will be placed over a junction
         TAGPROPERTY_PLACEDOVER_EDGES =    1 << 27,  // Element will be placed over a list of edges
         TAGPROPERTY_PLACEDOVER_LANES =    1 << 28,  // Element will be placed over a list of lanes
+        TAGPROPERTY_NOGENERICPARAMETERS = 1 << 29,  // Element doesn't accept Generic Parameters (by default all tags supports generic parameters)
     };
 
     /// @brief struct with the attribute Properties
@@ -370,6 +374,9 @@ public:
 
         /// @brief return true if tag correspond to an element that only have a limited number of childs
         bool hasMinimumNumberOfChilds() const;
+
+        /// @brief return true if Tag correspond to an element that supports generic parameters
+        bool hasGenericParameters() const;
 
         /// @brief return true if tag correspond to an element that can be reparent
         bool canBeReparent() const;
@@ -617,6 +624,8 @@ public:
             defaultValue = "0";
         } else if (attrProperties.isColor()) {
             defaultValue = "black";
+        } else if (attrProperties.isposition()) {
+            defaultValue = "0,0";
         }
         // first check that attribute exists in XML
         if (attrs.hasAttribute(attribute)) {
@@ -625,10 +634,6 @@ public:
             // check that sucesfully parsed attribute can be converted to type T
             if (parsedOk && !canParse<T>(parsedAttribute)) {
                 parsedOk = false;
-                // only set default value if this isn't a SVCPermission
-                if (!attrProperties.isVClass()) {
-                    parsedAttribute = defaultValue;
-                }
             }
             // declare a string for details about error formats
             std::string errorFormat;
@@ -684,6 +689,20 @@ public:
                     }
                 } else {
                     errorFormat = "Cannot be parsed to float; ";
+                    parsedOk = false;
+                }
+            }
+            // Set extra checks for position values
+            if (attrProperties.isposition()) {
+                // check if we're parsing a single position or an entire shape
+                if (attrProperties.isList()) {
+                    // check if parsed attribute can be parsed to Position Vector
+                    if(!canParse<PositionVector>(parsedAttribute)) {
+                        errorFormat = "List of Positions aren't neither x,y nor x,y,z; ";
+                        parsedOk = false;
+                    }
+                } else if (!canParse<Position>(parsedAttribute)) {
+                    errorFormat = "Position is neither x,y nor x,y,z; ";
                     parsedOk = false;
                 }
             }
@@ -798,6 +817,11 @@ public:
             // set extra check for list of VTypes
             if ((attribute == SUMO_ATTR_VTYPES) && !parsedAttribute.empty() && !SUMOXMLDefinitions::isValidListOfTypeID(parsedAttribute)) {
                 errorFormat = "List of vTypes contains invalid characters; ";
+                parsedOk = false;
+            }
+            // set extra check for list of RouteProbe
+            if ((attribute == SUMO_ATTR_ROUTEPROBE) && !parsedAttribute.empty() && !SUMOXMLDefinitions::isValidNetID(parsedAttribute)) {
+                errorFormat = "RouteProbe ID contains invalid characters; ";
                 parsedOk = false;
             }
             // If attribute has an invalid format

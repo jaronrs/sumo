@@ -59,6 +59,7 @@ typedef std::vector<const MSEdge*> ConstMSEdgeVector;
  */
 class SUMOVehicle {
 public:
+    typedef long long int NumericalID;
 
     // XXX: This definition was introduced to make the MSVehicle's previousSpeed
     //      available in the context of MSMoveReminder::notifyMove(). Another solution
@@ -389,6 +390,10 @@ public:
     * @return The vehicle's associated RNG
     */
     virtual std::mt19937* getRNG() const = 0;
+
+    /// @brief return the numerical ID which is only for internal usage
+    //  (especially fast comparison in maps which need vehicles as keys)
+    virtual NumericalID getNumericalID() const = 0;
 
     /// @name state io
     //@{

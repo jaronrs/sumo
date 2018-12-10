@@ -498,7 +498,7 @@ GUISUMOAbstractView::showToolTipFor(const GUIGlID id) {
             if (myVisualizationSettings->edgeValue.show && 
                     (object->getType() == GLO_EDGE || object->getType() == GLO_LANE)) {
                 const int activeScheme = myVisualizationSettings->getLaneEdgeMode();
-                label += " (" + toString(object->getColorValue(&myVisualizationSettings, activeScheme)) + ")";
+                label += " (" + toString(object->getColorValue(*myVisualizationSettings, activeScheme)) + ")";
             }
             GLHelper::drawTextBox(label, pos, GLO_MAX - 1, p2m(20), RGBColor::BLACK, RGBColor(255, 179, 0, 255));
             GUIGlObjectStorage::gIDStorage.unblockObject(id);
@@ -512,7 +512,7 @@ GUISUMOAbstractView::paintGLGrid() {
     // obtain minimum grid
     double minimumSizeGrid = (myVisualizationSettings->gridXSize < myVisualizationSettings->gridYSize) ? myVisualizationSettings->gridXSize : myVisualizationSettings->gridYSize;
     // Check if the distance is enought to draw grid
-    if (myVisualizationSettings->scale * myVisualizationSettings->addSize.getExaggeration(*myVisualizationSettings) >= (25 / minimumSizeGrid)) {
+    if (myVisualizationSettings->scale * myVisualizationSettings->addSize.getExaggeration(*myVisualizationSettings, nullptr) >= (25 / minimumSizeGrid)) {
         glEnable(GL_DEPTH_TEST);
         glLineWidth(1);
         // get multiplication values (2 is the marging)

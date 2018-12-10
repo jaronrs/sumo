@@ -122,16 +122,19 @@ GNETAZ::moveVertexShape(const int index, const Position& oldPos, const Position&
             myCurrentMovingVertexIndex = index;
             // if closed shape and cliked is first or last, move both giving more priority to first always
             if ((index == 0 || index == (int)myGeometry.shape.size() - 1)) {
-                // Change position of first shape Geometry Point
+                // Change position of first shape Geometry Point and filtern position using snap to active grid
                 myGeometry.shape.front() = oldPos;
                 myGeometry.shape.front().add(offset);
-                // Change position of last shape Geometry Point
+                myGeometry.shape.front() = myViewNet->snapToActiveGrid(myGeometry.shape.front());
+                // Change position of last shape Geometry Point and filtern position using snap to active grid
                 myGeometry.shape.back() = oldPos;
                 myGeometry.shape.back().add(offset);
+                myGeometry.shape.back() = myViewNet->snapToActiveGrid(myGeometry.shape.back());
             } else {
-                // change position of Geometry Point
+                // change position of Geometry Point and filtern position using snap to active grid
                 myGeometry.shape[index] = oldPos;
                 myGeometry.shape[index].add(offset);
+                myGeometry.shape[index] = myViewNet->snapToActiveGrid(myGeometry.shape[index]);
             }
             // return index of moved Geometry Point
             return index;
@@ -188,7 +191,11 @@ GNETAZ::commitShapeChange(const PositionVector& oldShape, GNEUndoList* undoList)
 
 
 int 
-GNETAZ::getVertexIndex(const Position& pos, bool createIfNoExist) {
+GNETAZ::getVertexIndex(Position pos, bool createIfNoExist, bool snapToGrid) {
+    // check if position has to be snapped to grid
+    if (snapToGrid) {
+        pos = myViewNet->snapToActiveGrid(pos);
+    }
     // first check if vertex already exists
     for (auto i : myGeometry.shape) {
         if (i.distanceTo2D(pos) < myHintSize) {
@@ -196,7 +203,7 @@ GNETAZ::getVertexIndex(const Position& pos, bool createIfNoExist) {
         }
     }
     // if vertex doesn't exist, insert it
-    if (createIfNoExist && (myGeometry.shape.distance2D(pos) < myHintSize)) {
+    if (createIfNoExist) {
         return myGeometry.shape.insertAtClosest(pos);
     } else {
         return -1;
@@ -251,7 +258,7 @@ GNETAZ::getParentName() const {
 
 void
 GNETAZ::drawGL(const GUIVisualizationSettings& s) const {
-    if (s.polySize.getExaggeration(s) == 0) {
+    if (s.polySize.getExaggeration(s, this) == 0) {
         return;
     }
     Boundary boundary = myGeometry.shape.getBoxBoundary();
@@ -297,7 +304,7 @@ GNETAZ::drawGL(const GUIVisualizationSettings& s) const {
             glPushMatrix();
             glTranslated(0, 0, GLO_POLYGON + 0.01);
             GLHelper::setColor(darkerColor);
-            GLHelper::drawBoxLines(myGeometry.shape, (myHintSize / 4) * s.polySize.getExaggeration(s));
+            GLHelper::drawBoxLines(myGeometry.shape, (myHintSize / 4) * s.polySize.getExaggeration(s, this));
             glPopMatrix();
             // draw points of shape
             for (auto i : myGeometry.shape) {
@@ -512,6 +519,7 @@ GNETAZ::setAttribute(SumoXMLAttr key, const std::string& value) {
             break;
         case GNE_ATTR_BLOCK_MOVEMENT:
             myBlockMovement = parse<bool>(value);
+            break;
         case GNE_ATTR_BLOCK_SHAPE:
             myBlockShape = parse<bool>(value);
             break;

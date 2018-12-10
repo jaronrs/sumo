@@ -56,6 +56,7 @@ public:
         FXCheckButton* myCheck;
         FXRealSpinner* mySizeDial;
         FXColorWell* myColorWell;
+        FXColorWell* myBGColorWell;
         FXCheckButton* myConstSizeCheck;
     };
 
@@ -70,6 +71,7 @@ public:
         FXRealSpinner* myMinSizeDial;
         FXRealSpinner* myExaggerateDial;
         FXCheckButton* myCheck;
+        FXCheckButton* myCheckSelected;
     };
 
     /** @brief Constructor

@@ -55,8 +55,9 @@
 // ===========================================================================
 GUIParkingArea::GUIParkingArea(const std::string& id, const std::vector<std::string>& lines, MSLane& lane,
                                double frompos, double topos, unsigned int capacity,
-                               double width, double length, double angle, const std::string& name) :
-    MSParkingArea(id, lines, lane, frompos, topos, capacity, width, length, angle, name),
+                               double width, double length, double angle, const std::string& name,
+                               bool onRoad) :
+    MSParkingArea(id, lines, lane, frompos, topos, capacity, width, length, angle, name, onRoad),
     GUIGlObject_AbstractAdd(GLO_PARKING_AREA, id) {
     const double offsetSign = MSNet::getInstance()->lefthand() ? -1 : 1;
     myShapeRotations.reserve(myShape.size() - 1);
@@ -127,7 +128,7 @@ GUIParkingArea::drawGL(const GUIVisualizationSettings& s) const {
     GLHelper::setColor(blue);
     GLHelper::drawBoxLines(myShape, myShapeRotations, myShapeLengths, myWidth / 2.);
     // draw details unless zoomed out to far
-    const double exaggeration = s.addSize.getExaggeration(s);
+    const double exaggeration = s.addSize.getExaggeration(s, this);
     if (s.scale * exaggeration >= 1) {
         // draw the lots
         glTranslated(0, 0, .1);
@@ -187,10 +188,10 @@ GUIParkingArea::drawGL(const GUIVisualizationSettings& s) const {
     }
     glPopMatrix();
     if (s.addFullName.show && getMyName() != "") {
-        GLHelper::drawText(getMyName(), mySignPos, GLO_MAX - getType(), s.addFullName.scaledSize(s.scale), s.addFullName.color, s.getTextAngle(mySignRot));
+        GLHelper::drawTextSettings(s.addFullName, getMyName(), mySignPos, s.scale, s.getTextAngle(mySignRot), GLO_MAX - getType());
     }
     glPopName();
-    drawName(getCenteringBoundary().getCenter(), s.scale, s.addName);
+    drawName(getCenteringBoundary().getCenter(), s.scale, s.addName, s.angle);
     for (std::vector<MSTransportable*>::const_iterator i = myWaitingTransportables.begin(); i != myWaitingTransportables.end(); ++i) {
         glTranslated(0, 1, 0); // make multiple containers viewable
         static_cast<GUIContainer*>(*i)->drawGL(s);

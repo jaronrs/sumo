@@ -221,7 +221,7 @@ GUIEdge::drawGL(const GUIVisualizationSettings& s) const {
         }
     }
     if (MSGlobals::gUseMesoSim) {
-        if (s.scale * s.vehicleSize.getExaggeration(s) > s.vehicleSize.minSize) {
+        if (s.scale * s.vehicleSize.getExaggeration(s, nullptr) > s.vehicleSize.minSize) {
             drawMesoVehicles(s);
         }
     }
@@ -250,8 +250,15 @@ GUIEdge::drawGL(const GUIVisualizationSettings& s) const {
                 drawName(p, s.scale, s.cwaEdgeName, angle);
             }
             if (drawStreetName) {
-                GLHelper::drawText(getStreetName(), p, GLO_MAX,
-                                   s.streetName.scaledSize(s.scale), s.streetName.color, angle);
+                GLHelper::drawTextSettings(s.streetName, getStreetName(), p, s.scale, angle);
+            }
+            if (drawEdgeValue) {
+                const int activeScheme = s.getLaneEdgeMode();
+                // use value of leftmost lane to hopefully avoid sidewalks, bikelanes etc
+                double value = (MSGlobals::gUseMesoSim 
+                    ? getColorValue(s, activeScheme)
+                    : lane2->getColorValue(s, activeScheme));
+                GLHelper::drawTextSettings(s.edgeValue, toString(value), p, s.scale, angle);
             }
             if (drawEdgeValue) {
                 const int activeScheme = s.getLaneEdgeMode();
@@ -264,7 +271,7 @@ GUIEdge::drawGL(const GUIVisualizationSettings& s) const {
             }
         }
     }
-    if (s.scale * s.personSize.getExaggeration(s) > s.personSize.minSize) {
+    if (s.scale * s.personSize.getExaggeration(s, nullptr) > s.personSize.minSize) {
         FXMutexLock locker(myLock);
         for (std::set<MSTransportable*>::const_iterator i = myPersons.begin(); i != myPersons.end(); ++i) {
             GUIPerson* person = dynamic_cast<GUIPerson*>(*i);
@@ -272,7 +279,7 @@ GUIEdge::drawGL(const GUIVisualizationSettings& s) const {
             person->drawGL(s);
         }
     }
-    if (s.scale * s.containerSize.getExaggeration(s) > s.containerSize.minSize) {
+    if (s.scale * s.containerSize.getExaggeration(s, nullptr) > s.containerSize.minSize) {
         FXMutexLock locker(myLock);
         for (std::set<MSTransportable*>::const_iterator i = myContainers.begin(); i != myContainers.end(); ++i) {
             GUIContainer* container = dynamic_cast<GUIContainer*>(*i);

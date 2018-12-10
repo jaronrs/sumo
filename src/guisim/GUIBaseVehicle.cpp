@@ -861,7 +861,7 @@ GUIBaseVehicle::drawAction_drawVehicleAsImage(const GUIVisualizationSettings& s,
     if (file != "") {
         int textureID = GUITexturesHelper::getTextureID(file);
         if (textureID > 0) {
-            const double exaggeration = s.vehicleSize.getExaggeration(s);
+            const double exaggeration = s.vehicleSize.getExaggeration(s, this);
             if (length < 0) {
                 length = getVType().getLength() * exaggeration;
             }
@@ -892,7 +892,7 @@ GUIBaseVehicle::drawOnPos(const GUIVisualizationSettings& s, const Position& pos
     // set lane color
     setColor(s);
     // scale
-    const double upscale = s.vehicleSize.getExaggeration(s);
+    const double upscale = s.vehicleSize.getExaggeration(s, this);
     double upscaleLength = upscale;
     if (upscale > 1 && length > 5) {
         // reduce the length/width ratio because this is not usefull at high zoom
@@ -1034,8 +1034,12 @@ GUIBaseVehicle::drawOnPos(const GUIVisualizationSettings& s, const Position& pos
              getVType().getGuiShape() == SVS_PEDESTRIAN ? s.personName : s.vehicleName, s.angle);
     if (s.vehicleName.show && myVehicle.getParameter().line != "") {
         glTranslated(0, 0.6 * s.vehicleName.scaledSize(s.scale), 0);
-        GLHelper::drawText("line:" + myVehicle.getParameter().line, Position(0, 0),
-                           GLO_MAX, s.vehicleName.scaledSize(s.scale), s.vehicleName.color, s.angle);
+        GLHelper::drawTextSettings(s.vehicleName, "line:" + myVehicle.getParameter().line, Position(0, 0), s.scale, s.angle);
+    }
+    if (s.vehicleValue.show) {
+        glTranslated(0, 0.6 * s.vehicleName.scaledSize(s.scale), 0);
+        const double value = getColorValue(s.vehicleColorer.getActive()); 
+        GLHelper::drawTextSettings(s.vehicleValue, toString(value), Position(0, 0), s.scale, s.angle);
     }
     if (s.vehicleValue.show) {
         glTranslated(0, 0.6 * s.vehicleName.scaledSize(s.scale), 0);

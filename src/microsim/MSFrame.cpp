@@ -627,7 +627,7 @@ MSFrame::checkOptions() {
         if (val != "default" && val != "decel") {
             try {
                 StringUtils::toDouble(val);
-            } catch (NumberFormatException) {
+            } catch (NumberFormatException&) {
                 WRITE_ERROR("Invalid value '" + val + "' for option 'default.emergencydecel'. Must be a FLOAT or 'default' or 'decel'");
                 ok = false;
             }
@@ -637,7 +637,7 @@ MSFrame::checkOptions() {
         try {
             string2time(val);
         } catch (ProcessError& e) {
-            WRITE_ERROR("Invalid time '" + val + "' for option 'breakpoints'. Must be a FLOAT or human-readable time");
+            WRITE_ERROR("Invalid time '" + val + "' for option 'breakpoints'." + e.what());
             ok = false;
         }
     };

@@ -464,6 +464,9 @@ public:
     /// @brief @return The vehicle's associated RNG
     std::mt19937* getRNG() const;
 
+    inline NumericalID getNumericalID() const {
+        return myNumericalID;
+    }
 
 protected:
     /** @brief (Re-)Calculates the arrival position and lane from the vehicle parameters
@@ -535,6 +538,11 @@ protected:
     static const SUMOTime NOT_YET_DEPARTED;
 
     static std::vector<MSTransportable*> myEmptyTransportableVector;
+
+private:
+    const NumericalID myNumericalID;
+
+    static NumericalID myCurrentNumericalIndex;
 
 private:
     /// invalidated assignment operator

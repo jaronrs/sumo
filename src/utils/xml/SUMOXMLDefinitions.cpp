@@ -454,6 +454,7 @@ StringBijection<int>::Entry SUMOXMLDefinitions::attrs[] = {
     { "timeThreshold",          SUMO_ATTR_HALTING_TIME_THRESHOLD },
     { "speedThreshold",         SUMO_ATTR_HALTING_SPEED_THRESHOLD },
     { "jamThreshold",           SUMO_ATTR_JAM_DIST_THRESHOLD },
+    { "show",                   SUMO_ATTR_SHOW_DETECTOR },
     // E3 detector
     { "openEntry",              SUMO_ATTR_OPEN_ENTRY },
 
@@ -472,6 +473,7 @@ StringBijection<int>::Entry SUMOXMLDefinitions::attrs[] = {
     { "containerStop",          SUMO_ATTR_CONTAINER_STOP },
     { "parkingArea",            SUMO_ATTR_PARKING_AREA },
     { "roadsideCapacity",       SUMO_ATTR_ROADSIDE_CAPACITY },
+    { "onRoad",                 SUMO_ATTR_ONROAD },
     { "chargingStation",        SUMO_ATTR_CHARGING_STATION},
     { "line",                   SUMO_ATTR_LINE },
     { "lines",                  SUMO_ATTR_LINES },

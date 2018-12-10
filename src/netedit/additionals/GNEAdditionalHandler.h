@@ -372,7 +372,7 @@ public:
      * @exception InvalidArgument If the charging Station can not be added to the net (is duplicate)
      */
     static GNEAdditional* buildParkingArea(GNEViewNet* viewNet, bool allowUndoRedo, const std::string& id, GNELane* lane, const std::string& startPos, const std::string& endPos, const std::string& name,
-                                           bool friendlyPosition, int roadSideCapacity, double width, const std::string& length, double angle, bool blockMovement);
+                                           bool friendlyPosition, int roadSideCapacity, bool onRoad, double width, const std::string& length, double angle, bool blockMovement);
 
     /**@brief Builds a Parking Space
      * @param[in] viewNet viewNet in which element will be inserted
@@ -522,7 +522,7 @@ public:
      * @return true if was sucesfully created, false in other case
      * @exception InvalidArgument If the entry detector can not be added to the net (is duplicate)
      */
-    static GNEAdditional* buildCalibrator(GNEViewNet* viewNet, bool allowUndoRedo, const std::string& id, GNELane* lane, double pos, const std::string& name, const std::string& outfile, double freq);
+    static GNEAdditional* buildCalibrator(GNEViewNet* viewNet, bool allowUndoRedo, const std::string& id, GNELane* lane, double pos, const std::string& name, const std::string& outfile, double freq, const std::string& routeprobe);
 
     /**@brief builds a microscopic calibrator over an edge
     * @param[in] viewNet viewNet in which element will be inserted
@@ -532,12 +532,13 @@ public:
     * @param[in] pos The position on the edge the calibrator lies at
     * @param[in] name Calibrator name
     * @param[in] outfile te file in which write results
+    * @param[in] routeProbe route probe vinculated with this calibrator
     * @return true if was sucesfully created, false in other case
     * @todo Is the position correct/needed
     * @return true if was sucesfully created, false in other case
     * @exception InvalidArgument If the entry detector can not be added to the net (is duplicate)
     */
-    static GNEAdditional* buildCalibrator(GNEViewNet* viewNet, bool allowUndoRedo, const std::string& id, GNEEdge* edge, double pos, const std::string& name, const std::string& outfile, double freq);
+    static GNEAdditional* buildCalibrator(GNEViewNet* viewNet, bool allowUndoRedo, const std::string& id, GNEEdge* edge, double pos, const std::string& name, const std::string& outfile, double freq, const std::string& routeprobe);
 
     /**
     DOCUMENTAR
@@ -747,13 +748,13 @@ public:
 
 private:
     /// @brief Stack used to save the last inserted element
-    struct HierarchyInsertedElements {
+    struct HierarchyInsertedAdditionals {
 
         /// @brief insert new element (called only in function myStartElement)
         void insertElement(SumoXMLTag tag);
 
-        /// @brief commit element insertion (used to save ID of last correct inserted element)
-        void commitElementInsertion(const std::string& id);
+        /// @brief commit element insertion (used to save last correct created element)
+        void commitElementInsertion(GNEAdditional* additionalCreated);
 
         /// @brief pop last inserted element (used only in function myEndElement)
         void popElement();
@@ -761,9 +762,12 @@ private:
         /// @brief retrieve additional parent correspond to current status of myInsertedElements
         GNEAdditional* retrieveAdditionalParent(GNEViewNet* viewNet, SumoXMLTag expectedTag) const;
 
+        /// @brief return last additional inserted
+        GNEAdditional* getLastInsertedAdditional() const;
+
     private:
         /// @brief vector used as stack
-        std::vector<std::pair<SumoXMLTag, std::string> > myInsertedElements;
+        std::vector<std::pair<SumoXMLTag, GNEAdditional*> > myInsertedElements;
     };
 
     /// @brief pointer to View's Net
@@ -775,11 +779,8 @@ private:
     /// @brief pointer to parent additional (used for loading additional childs placed in a different XML)
     GNEAdditional* myAdditionalParent;
 
-    /// @brief pointer to last inserted additional (used for generic parameters)
-    GNEAdditional* myLastInsertedAdditional;
-
-    /// @brief HierarchyInsertedElements used for insert childs
-    HierarchyInsertedElements myParentElements;
+    /// @brief HierarchyInsertedAdditionals used for insert childs
+    HierarchyInsertedAdditionals myHierarchyInsertedAdditionals;
 };
 
 

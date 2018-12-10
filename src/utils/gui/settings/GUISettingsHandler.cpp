@@ -222,6 +222,7 @@ GUISettingsHandler::myStartElement(int element,
             mySettings.vehicleColorer.setActive(StringUtils::toInt(attrs.getStringSecure("vehicleMode", "0")));
             mySettings.vehicleQuality = StringUtils::toInt(attrs.getStringSecure("vehicleQuality", toString(mySettings.vehicleQuality)));
             mySettings.showBlinker = StringUtils::toBool(attrs.getStringSecure("showBlinker", toString(mySettings.showBlinker)));
+            mySettings.drawMinGap = StringUtils::toBool(attrs.getStringSecure("drawMinGap", toString(mySettings.drawMinGap)));
             mySettings.vehicleSize = parseSizeSettings("vehicle", attrs, mySettings.vehicleSize);
             mySettings.vehicleName = parseTextSettings("vehicleName", attrs, mySettings.vehicleName);
             mySettings.vehicleValue = parseTextSettings("vehicleValue", attrs, mySettings.vehicleValue);
@@ -339,7 +340,8 @@ GUISettingsHandler::parseTextSettings(
     return GUIVisualizationTextSettings(
                StringUtils::toBool(attrs.getStringSecure(prefix + "_show", toString(defaults.show))),
                StringUtils::toDouble(attrs.getStringSecure(prefix + "_size", toString(defaults.size))),
-               RGBColor::parseColorReporting(attrs.getStringSecure(prefix + "_color", toString(defaults.color)), "edges", nullptr, true, ok),
+               RGBColor::parseColorReporting(attrs.getStringSecure(prefix + "_color", toString(defaults.color)), "textSettings", nullptr, true, ok),
+               RGBColor::parseColorReporting(attrs.getStringSecure(prefix + "_bgColor", toString(defaults.bgColor)), "textSettings", nullptr, true, ok),
                StringUtils::toBool(attrs.getStringSecure(prefix + "_constantSize", toString(defaults.constSize))));
 }
 
@@ -351,7 +353,8 @@ GUISettingsHandler::parseSizeSettings(
     return GUIVisualizationSizeSettings(
                StringUtils::toDouble(attrs.getStringSecure(prefix + "_minSize", toString(defaults.minSize))),
                StringUtils::toDouble(attrs.getStringSecure(prefix + "_exaggeration", toString(defaults.exaggeration))),
-               StringUtils::toBool(attrs.getStringSecure(prefix + "_constantSize", toString(defaults.constantSize))));
+               StringUtils::toBool(attrs.getStringSecure(prefix + "_constantSize", toString(defaults.constantSize))),
+               StringUtils::toBool(attrs.getStringSecure(prefix + "_constantSizeSelected", toString(defaults.constantSizeSelected))));
 }
 
 

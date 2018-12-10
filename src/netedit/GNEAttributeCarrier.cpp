@@ -278,6 +278,12 @@ GNEAttributeCarrier::AttributeProperties::isString() const {
 
 
 bool
+GNEAttributeCarrier::AttributeProperties::isposition() const {
+    return (myAttributeProperty & ATTRPROPERTY_POSITION) != 0;
+}
+
+
+bool
 GNEAttributeCarrier::AttributeProperties::isProbability() const {
     return (myAttributeProperty & ATTRPROPERTY_PROBABILITY) != 0;
 }
@@ -690,6 +696,13 @@ GNEAttributeCarrier::TagProperties::hasMinimumNumberOfChilds() const {
 }
 
 
+bool 
+GNEAttributeCarrier::TagProperties::hasGenericParameters() const {
+    // note: By default all Tags supports generic parameters, except Tags with "TAGPROPERTY_NOGENERICPARAMETERS"
+    return (myTagProperty & TAGPROPERTY_NOGENERICPARAMETERS) == 0;
+}
+
+
 bool
 GNEAttributeCarrier::TagProperties::canBeReparent() const {
     return (myTagProperty & TAGPROPERTY_REPARENT) != 0;
@@ -819,7 +832,7 @@ GNEAttributeCarrier::parse(const std::string& string) {
         throw EmptyData();
     } else {
         bool ok = true;
-        PositionVector pos = GeomConvHelper::parseShapeReporting(string, "user-supplied position", 0, ok, false, true);
+        PositionVector pos = GeomConvHelper::parseShapeReporting(string, "user-supplied position", 0, ok, false, false);
         if (!ok || (pos.size() != 1)) {
             throw NumberFormatException("(Position) " + string);
         } else {
@@ -1614,6 +1627,10 @@ GNEAttributeCarrier::fillAttributeCarriers() {
                                                  ATTRPROPERTY_INT | ATTRPROPERTY_POSITIVE | ATTRPROPERTY_DEFAULTVALUE | ATTRPROPERTY_OPTIONAL,
                                                  " The number of parking spaces for road-side parking ",
                                                  "0");
+        myTagProperties[currentTag].addAttribute(SUMO_ATTR_ONROAD,
+                                                 ATTRPROPERTY_BOOL | ATTRPROPERTY_DEFAULTVALUE | ATTRPROPERTY_OPTIONAL,
+                                                 "If set, vehicles will park on the road lane and thereby reducing capacity",
+                                                 "0");
         myTagProperties[currentTag].addAttribute(SUMO_ATTR_FRIENDLY_POS,
                                                  ATTRPROPERTY_BOOL | ATTRPROPERTY_DEFAULTVALUE | ATTRPROPERTY_OPTIONAL,
                                                  "If set, no error will be reported if element is placed behind the lane. Instead,it will be placed 0.1 meters from the lanes end or at position 0.1, if the position was negative and larger than the lanes length after multiplication with - 1",
@@ -1844,7 +1861,7 @@ GNEAttributeCarrier::fillAttributeCarriers() {
     currentTag = SUMO_TAG_DET_ENTRY;
     {
         // set values of tag
-        myTagProperties[currentTag] = TagProperties(currentTag, TAGPROPERTY_ADDITIONAL | TAGPROPERTY_DRAWABLE | TAGPROPERTY_PLACEDOVER_LANE | TAGPROPERTY_SELECTABLE | TAGPROPERTY_DETECTOR | TAGPROPERTY_PARENT | TAGPROPERTY_REPARENT | TAGPROPERTY_BLOCKMOVEMENT, additional, ICON_E3ENTRY, SUMO_TAG_E3DETECTOR);
+        myTagProperties[currentTag] = TagProperties(currentTag, TAGPROPERTY_ADDITIONAL | TAGPROPERTY_NOGENERICPARAMETERS | TAGPROPERTY_DRAWABLE | TAGPROPERTY_PLACEDOVER_LANE | TAGPROPERTY_SELECTABLE | TAGPROPERTY_DETECTOR | TAGPROPERTY_PARENT | TAGPROPERTY_REPARENT | TAGPROPERTY_BLOCKMOVEMENT, additional, ICON_E3ENTRY, SUMO_TAG_E3DETECTOR);
         // set values of attributes
         myTagProperties[currentTag].addAttribute(SUMO_ATTR_LANE,
                                                  ATTRPROPERTY_STRING | ATTRPROPERTY_UNIQUE,
@@ -1862,7 +1879,7 @@ GNEAttributeCarrier::fillAttributeCarriers() {
     currentTag = SUMO_TAG_DET_EXIT;
     {
         // set values of tag
-        myTagProperties[currentTag] = TagProperties(currentTag, TAGPROPERTY_ADDITIONAL | TAGPROPERTY_DRAWABLE | TAGPROPERTY_PLACEDOVER_LANE | TAGPROPERTY_SELECTABLE | TAGPROPERTY_DETECTOR | TAGPROPERTY_PARENT | TAGPROPERTY_REPARENT | TAGPROPERTY_BLOCKMOVEMENT, additional, ICON_E3EXIT, SUMO_TAG_E3DETECTOR);
+        myTagProperties[currentTag] = TagProperties(currentTag, TAGPROPERTY_ADDITIONAL | TAGPROPERTY_NOGENERICPARAMETERS | TAGPROPERTY_DRAWABLE | TAGPROPERTY_PLACEDOVER_LANE | TAGPROPERTY_SELECTABLE | TAGPROPERTY_DETECTOR | TAGPROPERTY_PARENT | TAGPROPERTY_REPARENT | TAGPROPERTY_BLOCKMOVEMENT, additional, ICON_E3EXIT, SUMO_TAG_E3DETECTOR);
         // set values of attributes
         myTagProperties[currentTag].addAttribute(SUMO_ATTR_LANE,
                                                  ATTRPROPERTY_STRING | ATTRPROPERTY_UNIQUE,

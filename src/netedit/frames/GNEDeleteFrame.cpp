@@ -137,21 +137,21 @@ GNEDeleteFrame::removeAttributeCarrier(GNEAttributeCarrier* ac, bool ignoreOptio
         switch (ac->getTagProperty().getTag()) {
             case SUMO_TAG_EDGE: {
                 GNEEdge* edge = dynamic_cast<GNEEdge*>(ac);
-                if (edge && (edge->getVertexIndex(clickedPosition, false) != -1)) {
+                if (edge && (edge->getVertexIndex(clickedPosition, false, false) != -1)) {
                     edge->deleteGeometryPoint(clickedPosition);
                 }
                 break;
             }
             case SUMO_TAG_POLY: {
                 GNEPoly* polygon = dynamic_cast<GNEPoly*>(ac);
-                if (polygon && (polygon->getVertexIndex(clickedPosition, false) != -1)) {
+                if (polygon && (polygon->getVertexIndex(clickedPosition, false, false) != -1)) {
                     polygon->deleteGeometryPoint(clickedPosition);
                 }
                 break;
             }
             case SUMO_TAG_TAZ: {
                 GNETAZ* TAZ = dynamic_cast<GNETAZ*>(ac);
-                if (TAZ && TAZ->getVertexIndex(clickedPosition, false) != -1) {
+                if (TAZ && TAZ->getVertexIndex(clickedPosition, false, false) != -1) {
                     TAZ->deleteGeometryPoint(clickedPosition);
                 }
                 break;
@@ -199,7 +199,7 @@ GNEDeleteFrame::removeAttributeCarrier(GNEAttributeCarrier* ac, bool ignoreOptio
                 GNEEdge* edge = dynamic_cast<GNEEdge*>(ac);
                 assert(edge);
                 // check if click was over a geometry point or over a shape's edge
-                if (edge->getVertexIndex(clickedPosition, false) != -1) {
+                if (edge->getVertexIndex(clickedPosition, false, false) != -1) {
                     edge->deleteGeometryPoint(clickedPosition);
                 } else {
                     int numberOfAdditionalChilds = (int)edge->getAdditionalChilds().size();
