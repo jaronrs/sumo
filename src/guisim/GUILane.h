@@ -221,7 +221,7 @@ public:
     void drawBikeMarkings() const;
 
     /// @brief direction indicators for lanes
-    void drawDirectionIndicators(double exaggeration) const;
+    void drawDirectionIndicators(double exaggeration, bool spreadSuperposed) const;
 
     /// @brief draw intersection positions of foe internal lanes with this one
     void debugDrawFoeIntersections() const;
@@ -262,6 +262,10 @@ public:
      * @param[in] id override active scheme when calling from meso gui
      */
     bool setFunctionalColor(const GUIColorer& c, RGBColor& col, int activeScheme=-1) const;
+
+    /// @brief whether to draw this lane as a railway
+    bool drawAsRailway(const GUIVisualizationSettings& s) const;
+
 
 protected:
     /// moves myTmpVehicles int myVehicles after a lane change procedure
@@ -309,9 +313,6 @@ private:
 
     /// @brief sets the color according to the currente settings
     RGBColor setColor(const GUIVisualizationSettings& s) const;
-
-    /// @brief whether to draw this lane as a railway
-    bool drawAsRailway(const GUIVisualizationSettings& s) const;
 
     /// @brief whether to draw this lane as a waterway
     bool drawAsWaterway(const GUIVisualizationSettings& s) const;
